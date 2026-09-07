@@ -4,6 +4,7 @@ import Editor from "./features/editor/Editor";
 import BacklinksPanel from "./features/backlinks/BacklinksPanel";
 import TagPane from "./features/tags/TagPane";
 import CommandPalette from "./features/commandpalette/CommandPalette";
+import GraphView from "./features/graph/GraphView";
 import { useVaultStore } from "./stores/useVaultStore";
 import { useUiStore } from "./stores/useUiStore";
 
@@ -18,6 +19,7 @@ export default function App() {
   const toggleTheme = useUiStore((s) => s.toggleTheme);
 
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [graphOpen, setGraphOpen] = useState(false);
 
   useEffect(() => {
     void loadAll();
@@ -40,13 +42,22 @@ export default function App() {
       <aside className="flex w-64 flex-col border-r border-neutral-200 dark:border-neutral-800">
         <div className="flex items-center justify-between border-b border-neutral-200 px-3 py-2 dark:border-neutral-800">
           <span className="text-sm font-semibold">VaultFlow</span>
-          <button
-            onClick={() => void toggleTheme()}
-            className="text-xs opacity-70 hover:opacity-100"
-            title="Toggle theme"
-          >
-            {theme === "dark" ? "☀︎" : "☾"}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setGraphOpen(true)}
+              className="text-xs opacity-70 hover:opacity-100"
+              title="Graph view"
+            >
+              ◎
+            </button>
+            <button
+              onClick={() => void toggleTheme()}
+              className="text-xs opacity-70 hover:opacity-100"
+              title="Toggle theme"
+            >
+              {theme === "dark" ? "☀︎" : "☾"}
+            </button>
+          </div>
         </div>
         {loaded ? (
           <>
@@ -75,6 +86,7 @@ export default function App() {
         )}
       </main>
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      {graphOpen && <GraphView onClose={() => setGraphOpen(false)} />}
     </div>
   );
 }

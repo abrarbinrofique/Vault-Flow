@@ -37,15 +37,39 @@ export function mergeLibrary(
 }
 
 /**
- * Parse an .excalidrawlib file. Supports v1 (array of items) and v2
- * (`{ type: "excalidrawlib", libraryItems: [...] }`). Throws on invalid input.
+ * Parse an .excalidrawlib file. Handles:
+ *   - modern (v2+): `{ type: "excalidrawlib", libraryItems: [{ id, elements, ... }, ...] }`
+ *   - legacy (v1): `{ type: "excalidrawlib", version: 1, library: [[element, ...], [element, ...]] }`
+ *   - a bare array of library items (some exports)
+ * Throws on invalid input.
  */
 export function parseLibraryFile(text: string): LibraryItem[] {
   const data = JSON.parse(text) as unknown;
+
+  // Bare array
   if (Array.isArray(data)) return data as LibraryItem[];
+
   if (data && typeof data === "object") {
-    const d = data as { type?: string; libraryItems?: LibraryItem[] };
+    const d = data as {
+      type?: string;
+      libraryItems?: LibraryItem[];
+      library?: unknown[];
+    };
+
     if (Array.isArray(d.libraryItems)) return d.libraryItems;
+
+    // v1: library is an array of element arrays; wrap each into a library item.
+    if (Array.isArray(d.library)) {
+      const now = Date.now();
+      return d.library
+        .filter((entry): entry is unknown[] => Array.isArray(entry))
+        .map((elements, i) => ({
+          id: `imported-${now}-${i}-${Math.random().toString(36).slice(2, 8)}`,
+          status: "published",
+          elements,
+          created: now,
+        }));
+    }
   }
   throw new Error("Not a valid .excalidrawlib file");
 }

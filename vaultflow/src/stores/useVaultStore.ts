@@ -16,6 +16,12 @@ import {
   upsert as upsertSearch,
   type SearchHit,
 } from "../lib/searchIndex";
+import {
+  mirrorCreateFolder,
+  mirrorDeleteFolder,
+  mirrorDeleteNote,
+  mirrorWriteNote,
+} from "../lib/folderSync";
 
 const searchIndex = createSearchIndex();
 
@@ -43,6 +49,12 @@ interface VaultState {
   createFolder: (name: string, parentPath?: string) => Promise<void>;
   renameFolder: (oldPath: string, newName: string) => Promise<void>;
   deleteFolder: (path: string) => Promise<void>;
+
+  importFromFolder: (imported: {
+    title: string;
+    path: string;
+    content: string;
+  }[]) => Promise<void>;
 }
 
 async function persistFolders(folders: Record<string, Folder>) {
@@ -89,6 +101,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   createNote: async ({ title, path, content }) => {
     const note = await storage.createFile({ title, path: path ?? "", content });
     upsertSearch(searchIndex, note);
+    mirrorWriteNote(note);
     set((s) => ({
       notes: { ...s.notes, [note.id]: note },
       activeNoteId: note.id,
@@ -122,7 +135,11 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     await Promise.all(rewritten.map((n) => storage.writeFile(n)));
 
     upsertSearch(searchIndex, renamed);
-    for (const r of rewritten) upsertSearch(searchIndex, r);
+    mirrorWriteNote(renamed, note);
+    for (const r of rewritten) {
+      upsertSearch(searchIndex, r);
+      mirrorWriteNote(r, r); // content changed only; same filename
+    }
 
     set((s) => {
       const notes = { ...s.notes, [id]: renamed };
@@ -134,8 +151,10 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   },
 
   deleteNote: async (id) => {
+    const existing = get().notes[id];
     await storage.deleteFile(id);
     removeFromSearch(searchIndex, id);
+    if (existing) mirrorDeleteNote(existing);
     set((s) => {
       const next = { ...s.notes };
       delete next[id];
@@ -154,6 +173,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     const updated: Note = { ...note, content, updatedAt: Date.now() };
     await storage.writeFile(updated);
     upsertSearch(searchIndex, updated);
+    mirrorWriteNote(updated);
     set((s) => ({
       notes: { ...s.notes, [id]: updated },
       linkIndex: updateLinkIndex(s.linkIndex, updated),
@@ -167,6 +187,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     const folders = { ...get().folders, [path]: folder };
     set({ folders });
     await persistFolders(folders);
+    mirrorCreateFolder(path);
   },
 
   renameFolder: async (oldPath, newName) => {
@@ -205,6 +226,13 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     set({ folders, notes });
     await Promise.all(affected.map((n) => storage.writeFile(n)));
     await persistFolders(folders);
+
+    mirrorCreateFolder(newPath);
+    for (const n of affected) {
+      const prev = state.notes[n.id];
+      mirrorWriteNote(n, prev);
+    }
+    mirrorDeleteFolder(oldPath);
   },
 
   deleteFolder: async (path) => {
@@ -233,5 +261,53 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     set({ folders, notes, activeNoteId, linkIndex });
     await Promise.all(toDelete.map((id) => storage.deleteFile(id)));
     await persistFolders(folders);
+    mirrorDeleteFolder(path);
+  },
+
+  importFromFolder: async (imported: {
+    title: string;
+    path: string;
+    content: string;
+  }[]) => {
+    // Import notes as new notes (do not delete IDB ones that aren't in the folder).
+    const nowNotes = { ...get().notes };
+    const folders = { ...get().folders };
+    for (const imp of imported) {
+      const dup = Object.values(nowNotes).find(
+        (n) =>
+          n.path === imp.path &&
+          n.title.toLowerCase() === imp.title.toLowerCase(),
+      );
+      if (dup) {
+        if (dup.content !== imp.content) {
+          const updated = { ...dup, content: imp.content, updatedAt: Date.now() };
+          await storage.writeFile(updated);
+          upsertSearch(searchIndex, updated);
+          nowNotes[dup.id] = updated;
+        }
+        continue;
+      }
+      const created = await storage.createFile({
+        title: imp.title,
+        path: imp.path,
+        content: imp.content,
+      });
+      upsertSearch(searchIndex, created);
+      nowNotes[created.id] = created;
+
+      // Ensure ancestor folders exist in the vault store too.
+      const segs = imp.path ? imp.path.split("/").filter(Boolean) : [];
+      let acc = "";
+      for (const seg of segs) {
+        acc = acc ? `${acc}/${seg}` : seg;
+        if (!folders[acc]) {
+          folders[acc] = { id: crypto.randomUUID(), name: seg, path: acc };
+        }
+      }
+    }
+    const linkIndex = buildLinkIndex(Object.values(nowNotes));
+    replaceSearch(searchIndex, Object.values(nowNotes));
+    await persistFolders(folders);
+    set({ notes: nowNotes, folders, linkIndex });
   },
 }));

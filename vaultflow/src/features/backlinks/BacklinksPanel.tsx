@@ -105,7 +105,10 @@ export default function BacklinksPanel({ noteId }: Props = {}) {
               No notes link here yet.
             </div>
           ) : (
-            <ul className="space-y-2">
+            <ul
+              className="space-y-2 overflow-y-auto pr-1"
+              style={{ maxHeight: 320 }}
+            >
               {sources.map((s) => (
                 <li
                   key={s.id}

@@ -3,6 +3,7 @@ import { EditorState } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown } from "@codemirror/lang-markdown";
+import { GFM } from "@lezer/markdown";
 import { completionKeymap } from "@codemirror/autocomplete";
 import { useVaultStore } from "../../stores/useVaultStore";
 import { debounce } from "../../lib/debounce";
@@ -15,7 +16,7 @@ import { codeCopyButtons } from "./codeCopy";
 const baseExtensions = [
   history(),
   keymap.of([...defaultKeymap, ...historyKeymap, ...completionKeymap]),
-  markdown(),
+  markdown({ extensions: [GFM] }),
   proseStyling(),
   codeCopyButtons(),
   wikilinkAutocomplete(),

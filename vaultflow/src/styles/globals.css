@@ -286,6 +286,46 @@ button {
   opacity: 0.6;
 }
 
+/* List items: hanging indent so wrapped lines align with the text, not the marker */
+.cm-editor .cm-md-listitem {
+  padding-left: 26px;
+  text-indent: -26px;
+}
+.cm-editor .cm-md-list-marker {
+  color: var(--vf-muted);
+  font-weight: 500;
+}
+
+/* Task list checkbox */
+.cm-editor .cm-task-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin: 0 6px 0 0;
+  vertical-align: -2px;
+  border: 1.5px solid var(--vf-border-strong);
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+.cm-editor .cm-task-checkbox:hover {
+  border-color: var(--vf-accent);
+}
+.cm-editor .cm-task-checkbox:checked {
+  background: var(--vf-accent);
+  border-color: var(--vf-accent);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M5 13l4 4L19 7'/></svg>");
+  background-size: 10px 10px;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.cm-editor .cm-task-checkbox:focus-visible {
+  outline: 2px solid var(--vf-ring);
+  outline-offset: 2px;
+}
+
 /* Inline emphasis */
 .cm-editor .cm-md-strong { font-weight: 700; color: var(--vf-fg); }
 .cm-editor .cm-md-em { font-style: italic; }

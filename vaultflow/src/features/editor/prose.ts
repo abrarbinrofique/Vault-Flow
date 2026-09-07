@@ -18,6 +18,7 @@ import {
   EditorView,
   ViewPlugin,
   type ViewUpdate,
+  WidgetType,
 } from "@codemirror/view";
 import { HighlightStyle, syntaxHighlighting, syntaxTree } from "@codemirror/language";
 import { tags as t } from "@lezer/highlight";
@@ -54,6 +55,45 @@ function activeLineSet(view: EditorView): Set<number> {
 const HIDE = Decoration.replace({});
 const DIM = Decoration.mark({ class: "cm-md-syntax" });
 const TAG_MARK = Decoration.mark({ class: "cm-md-tag" });
+const LIST_LINE = Decoration.line({ class: "cm-md-listitem" });
+
+class TaskCheckboxWidget extends WidgetType {
+  constructor(
+    readonly checked: boolean,
+    readonly from: number,
+    readonly to: number,
+  ) {
+    super();
+  }
+  eq(other: TaskCheckboxWidget) {
+    return (
+      other.checked === this.checked &&
+      other.from === this.from &&
+      other.to === this.to
+    );
+  }
+  toDOM(view: EditorView) {
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.className = "cm-task-checkbox";
+    input.checked = this.checked;
+    input.contentEditable = "false";
+    input.setAttribute("aria-label", "Toggle task");
+    input.addEventListener("mousedown", (e) => e.preventDefault());
+    input.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const next = this.checked ? "[ ]" : "[x]";
+      view.dispatch({
+        changes: { from: this.from, to: this.to, insert: next },
+      });
+    });
+    return input;
+  }
+  ignoreEvent() {
+    return false;
+  }
+}
 
 const TAG_RE = /(^|\s)(#[\w/-]+)/g;
 
@@ -99,6 +139,33 @@ function buildDecorations(view: EditorView): DecorationSet {
             } else {
               decos.push(HIDE.range(mark.from, rangeEnd));
             }
+          }
+          return;
+        }
+
+        // Lists: hanging indent per line + task checkbox widget
+        if (name === "ListItem") {
+          const startLine = view.state.doc.lineAt(node.from).number;
+          const endLine = view.state.doc.lineAt(node.to).number;
+          for (let n = startLine; n <= endLine; n++) {
+            const line = view.state.doc.line(n);
+            decos.push(LIST_LINE.range(line.from));
+          }
+
+          // Task marker inside the list item?
+          const c = node.node.cursor();
+          if (c.firstChild()) {
+            do {
+              if (c.name === "TaskMarker") {
+                const text = view.state.sliceDoc(c.from, c.to);
+                const checked = text.toLowerCase().includes("x");
+                decos.push(
+                  Decoration.replace({
+                    widget: new TaskCheckboxWidget(checked, c.from, c.to),
+                  }).range(c.from, c.to),
+                );
+              }
+            } while (c.nextSibling());
           }
           return;
         }

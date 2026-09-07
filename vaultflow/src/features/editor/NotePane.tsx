@@ -11,6 +11,56 @@ interface Props {
   actions?: React.ReactNode;
 }
 
+function CopyNoteButton({ content }: { content: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      className="vf-icon-btn"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(content);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1200);
+        } catch {
+          /* ignore */
+        }
+      }}
+      aria-label="Copy full note to clipboard"
+      title={copied ? "Copied" : "Copy note"}
+      style={{ color: copied ? "var(--vf-accent)" : undefined }}
+    >
+      {copied ? (
+        <svg
+          width={14}
+          height={14}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M5 13l4 4L19 7" />
+        </svg>
+      ) : (
+        <svg
+          width={14}
+          height={14}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.75"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect x="9" y="9" width="11" height="11" rx="2" />
+          <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 type SaveState = "idle" | "saving" | "saved";
 
 export default function NotePane({ noteId, showBacklinks = true, actions }: Props) {
@@ -85,7 +135,10 @@ export default function NotePane({ noteId, showBacklinks = true, actions }: Prop
             Saved
           </span>
         </div>
-        <div className="flex items-center gap-1">{actions}</div>
+        <div className="flex items-center gap-1">
+          <CopyNoteButton content={note.content} />
+          {actions}
+        </div>
       </div>
       <div className="flex-1 overflow-hidden">
         <Editor noteId={note.id} initialContent={note.content} />

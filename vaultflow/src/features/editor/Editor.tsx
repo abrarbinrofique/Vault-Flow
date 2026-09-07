@@ -10,12 +10,14 @@ import { wikilinkAutocomplete } from "./wikilinkComplete";
 import { wikilinkClick } from "./wikilinkClick";
 import { livePreview } from "./livePreview";
 import { proseStyling } from "./prose";
+import { codeCopyButtons } from "./codeCopy";
 
 const baseExtensions = [
   history(),
   keymap.of([...defaultKeymap, ...historyKeymap, ...completionKeymap]),
   markdown(),
   proseStyling(),
+  codeCopyButtons(),
   wikilinkAutocomplete(),
   wikilinkClick(),
   livePreview(),

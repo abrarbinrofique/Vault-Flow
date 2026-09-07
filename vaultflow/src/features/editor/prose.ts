@@ -177,7 +177,7 @@ function buildDecorations(view: EditorView): DecorationSet {
           return;
         }
 
-        // Blockquotes: left border
+        // Blockquotes: left border, hide/dim > marks per line
         if (name === "Blockquote") {
           const startLine = view.state.doc.lineAt(node.from).number;
           const endLine = view.state.doc.lineAt(node.to).number;
@@ -186,6 +186,23 @@ function buildDecorations(view: EditorView): DecorationSet {
             decos.push(
               Decoration.line({ class: "cm-md-blockquote" }).range(line.from),
             );
+          }
+          const c = node.node.cursor();
+          if (c.firstChild()) {
+            do {
+              if (c.name === "QuoteMark") {
+                const markLine = view.state.doc.lineAt(c.from).number;
+                // Include the single space after > if present.
+                const trailingSpace =
+                  view.state.sliceDoc(c.to, c.to + 1) === " " ? 1 : 0;
+                const to = c.to + trailingSpace;
+                if (activeLines.has(markLine)) {
+                  decos.push(DIM.range(c.from, to));
+                } else {
+                  decos.push(HIDE.range(c.from, to));
+                }
+              }
+            } while (c.nextSibling());
           }
           return;
         }

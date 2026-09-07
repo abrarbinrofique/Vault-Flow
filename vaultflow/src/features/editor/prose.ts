@@ -103,6 +103,31 @@ function buildDecorations(view: EditorView): DecorationSet {
           return;
         }
 
+        // Bold / Italic / Bold+Italic / Strikethrough — hide the ** * _ ~~ marks
+        if (
+          name === "StrongEmphasis" ||
+          name === "Emphasis" ||
+          name === "Strikethrough"
+        ) {
+          const markName =
+            name === "Strikethrough" ? "StrikethroughMark" : "EmphasisMark";
+          const line = view.state.doc.lineAt(node.from).number;
+          const isActive = activeLines.has(line);
+          const c = node.node.cursor();
+          if (c.firstChild()) {
+            do {
+              if (c.name === markName) {
+                if (isActive) {
+                  decos.push(DIM.range(c.from, c.to));
+                } else {
+                  decos.push(HIDE.range(c.from, c.to));
+                }
+              }
+            } while (c.nextSibling());
+          }
+          return;
+        }
+
         // Fenced code blocks: mono line + surface bar
         if (name === "FencedCode" || name === "CodeBlock") {
           const startLine = view.state.doc.lineAt(node.from).number;

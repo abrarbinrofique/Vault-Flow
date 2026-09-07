@@ -4,11 +4,84 @@ import BacklinksPanel from "../backlinks/BacklinksPanel";
 import UnlinkedMentions from "../backlinks/UnlinkedMentions";
 import Icon from "../../components/Icon";
 import { useVaultStore } from "../../stores/useVaultStore";
+import { noteToHtml, noteToMarkdown } from "../../lib/exportNote";
+import { triggerDownload } from "../../lib/vaultZip";
+import type { Note } from "../../types";
 
 interface Props {
   noteId: string;
   showBacklinks?: boolean;
   actions?: React.ReactNode;
+}
+
+function NoteMenu({ note }: { note: Note }) {
+  const [open, setOpen] = useState(false);
+  const exportMd = () => {
+    const { blob, filename } = noteToMarkdown(note);
+    triggerDownload(blob, filename);
+  };
+  const exportHtml = () => {
+    const { blob, filename } = noteToHtml(note);
+    triggerDownload(blob, filename);
+  };
+  return (
+    <div className="relative">
+      <button
+        className="vf-icon-btn"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Note actions"
+        title="Note actions"
+      >
+        <Icon name="more" size={14} />
+      </button>
+      {open && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setOpen(false)}
+          />
+          <div
+            className="absolute right-0 z-50 mt-1 min-w-[180px] overflow-hidden vf-panel"
+            style={{
+              boxShadow: "var(--vf-shadow-md)",
+              background: "var(--vf-surface)",
+            }}
+          >
+            <button
+              onClick={() => {
+                setOpen(false);
+                exportMd();
+              }}
+              className="flex w-full items-center gap-2 px-3 text-left text-[12.5px]"
+              style={{ height: 30, color: "var(--vf-fg-secondary)" }}
+              onMouseOver={(e) =>
+                (e.currentTarget.style.background = "var(--vf-surface-hover)")
+              }
+              onMouseOut={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <Icon name="file" size={13} />
+              Export as Markdown
+            </button>
+            <button
+              onClick={() => {
+                setOpen(false);
+                exportHtml();
+              }}
+              className="flex w-full items-center gap-2 px-3 text-left text-[12.5px]"
+              style={{ height: 30, color: "var(--vf-fg-secondary)" }}
+              onMouseOver={(e) =>
+                (e.currentTarget.style.background = "var(--vf-surface-hover)")
+              }
+              onMouseOut={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <Icon name="file" size={13} />
+              Export as HTML
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 function CopyNoteButton({ content }: { content: string }) {
@@ -137,6 +210,7 @@ export default function NotePane({ noteId, showBacklinks = true, actions }: Prop
         </div>
         <div className="flex items-center gap-1">
           <CopyNoteButton content={note.content} />
+          <NoteMenu note={note} />
           {actions}
         </div>
       </div>

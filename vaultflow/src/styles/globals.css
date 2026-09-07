@@ -155,38 +155,39 @@ button {
 }
 
 /* --------------------------------------------------------------------------
- * CodeMirror integration
+ * CodeMirror — prose-first editor
  * ------------------------------------------------------------------------ */
 .cm-editor {
-  background: var(--vf-bg);
+  background: transparent;
   color: var(--vf-fg);
-  font-size: var(--vf-text-editor);
+  font-family: var(--vf-font-sans);
+  font-size: 16px;
   line-height: 1.7;
   height: 100%;
 }
+.cm-editor.cm-focused {
+  outline: none;
+}
 .cm-editor .cm-scroller {
-  font-family: var(--vf-font-mono);
-  padding: 8px 0;
+  font-family: inherit;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .cm-editor .cm-content {
-  padding: 24px max(24px, calc((100% - 72ch) / 2));
+  /* Center a 70ch column; comfortable top padding puts the first line
+     right at the top of the column, not floating in the middle. */
+  padding: 48px max(24px, calc((100% - 70ch) / 2)) 40vh;
   caret-color: var(--vf-accent);
+  min-height: 100%;
 }
 .cm-editor .cm-line {
-  padding: 0;
+  padding: 2px 0;
 }
 .cm-editor .cm-gutters {
-  background: transparent;
-  color: var(--vf-subtle);
-  border-right: 1px solid transparent;
-  padding-right: 4px;
+  display: none;
 }
 .cm-editor .cm-activeLine {
-  background: color-mix(in oklab, var(--vf-accent) 5%, transparent);
-}
-.cm-editor .cm-activeLineGutter {
-  background: transparent;
-  color: var(--vf-fg-secondary);
+  background: transparent; /* keep it quiet in prose mode */
 }
 .cm-editor .cm-cursor,
 .cm-editor .cm-dropCursor {
@@ -197,26 +198,113 @@ button {
 .cm-editor ::selection {
   background: var(--vf-accent-tint) !important;
 }
-.cm-editor .cm-wikilink {
-  color: var(--vf-accent);
-  text-decoration: none;
-  border-bottom: 1px dashed color-mix(in oklab, var(--vf-accent) 60%, transparent);
-  cursor: pointer;
-  transition: color 120ms ease;
-}
-.cm-editor .cm-wikilink:hover {
-  color: var(--vf-accent-hover);
-  border-bottom-color: var(--vf-accent-hover);
-}
+
+/* Wikilinks: accent, no underline unless hover */
+.cm-editor .cm-wikilink,
 .cm-editor .cm-wl-alias {
   color: var(--vf-accent);
   text-decoration: none;
-  border-bottom: 1px dashed color-mix(in oklab, var(--vf-accent) 60%, transparent);
+  border-bottom: none;
   cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+.cm-editor .cm-wikilink:hover,
+.cm-editor .cm-wl-alias:hover {
+  color: var(--vf-accent-hover);
+  border-bottom: 1px solid var(--vf-accent-hover);
+}
+.cm-editor .cm-wikilink.is-broken {
+  color: var(--vf-muted);
+  border-bottom: 1px dashed var(--vf-muted);
 }
 .cm-editor .cm-wl-hide {
   opacity: 0;
   font-size: 0.001em;
+}
+
+/* Tag pill chips */
+.cm-editor .cm-md-tag {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-family: var(--vf-font-sans);
+  font-weight: 500;
+  color: var(--vf-accent);
+  background: var(--vf-accent-soft);
+  line-height: 1.6;
+  vertical-align: baseline;
+}
+
+/* Headings */
+.cm-editor .cm-md-heading {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--vf-fg);
+}
+.cm-editor .cm-md-heading-1 {
+  font-size: 28px;
+  line-height: 1.25;
+  padding-top: 6px;
+  padding-bottom: 4px;
+}
+.cm-editor .cm-md-heading-2 {
+  font-size: 22px;
+  line-height: 1.3;
+  padding-top: 4px;
+  padding-bottom: 2px;
+}
+.cm-editor .cm-md-heading-3 {
+  font-size: 18px;
+  line-height: 1.35;
+  padding-top: 2px;
+}
+.cm-editor .cm-md-heading-4 {
+  font-size: 16px;
+  font-weight: 600;
+}
+.cm-editor .cm-md-h1 { font-size: 28px; font-weight: 700; }
+.cm-editor .cm-md-h2 { font-size: 22px; font-weight: 700; }
+.cm-editor .cm-md-h3 { font-size: 18px; font-weight: 600; }
+.cm-editor .cm-md-h4 { font-size: 16px; font-weight: 600; }
+
+/* Inline emphasis */
+.cm-editor .cm-md-strong { font-weight: 700; color: var(--vf-fg); }
+.cm-editor .cm-md-em { font-style: italic; }
+.cm-editor .cm-md-strike { text-decoration: line-through; color: var(--vf-muted); }
+.cm-editor .cm-md-link { color: var(--vf-accent); }
+.cm-editor .cm-md-url { color: var(--vf-muted); }
+.cm-editor .cm-md-meta { color: var(--vf-subtle); }
+.cm-editor .cm-md-list-marker { color: var(--vf-muted); }
+.cm-editor .cm-md-quote { color: var(--vf-muted); }
+
+/* Blockquote — left border via line decoration */
+.cm-editor .cm-md-blockquote {
+  border-left: 3px solid var(--vf-border-strong);
+  padding-left: 12px;
+  color: var(--vf-muted);
+  font-style: italic;
+}
+
+/* Code blocks: mono font, subtle surface */
+.cm-editor .cm-md-codeblock,
+.cm-editor .cm-md-codeblock * {
+  font-family: var(--vf-font-mono);
+}
+.cm-editor .cm-md-codeblock {
+  font-size: 13.5px;
+  background: var(--vf-surface);
+  border-left: 2px solid var(--vf-border-strong);
+  padding-left: 10px;
+}
+
+/* Inline code */
+.cm-editor .cm-md-code-inline {
+  font-family: var(--vf-font-mono);
+  font-size: 0.9em;
+  background: var(--vf-surface-hover);
+  padding: 1px 5px;
+  border-radius: 4px;
 }
 
 /* Autocomplete popup */

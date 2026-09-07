@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { EditorState } from "@codemirror/state";
-import { EditorView, keymap, lineNumbers } from "@codemirror/view";
+import { EditorView, keymap } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown } from "@codemirror/lang-markdown";
 import { completionKeymap } from "@codemirror/autocomplete";
@@ -9,20 +9,17 @@ import { debounce } from "../../lib/debounce";
 import { wikilinkAutocomplete } from "./wikilinkComplete";
 import { wikilinkClick } from "./wikilinkClick";
 import { livePreview } from "./livePreview";
+import { proseStyling } from "./prose";
 
 const baseExtensions = [
   history(),
   keymap.of([...defaultKeymap, ...historyKeymap, ...completionKeymap]),
   markdown(),
+  proseStyling(),
   wikilinkAutocomplete(),
   wikilinkClick(),
   livePreview(),
   EditorView.lineWrapping,
-  lineNumbers(),
-  EditorView.theme({
-    "&": { height: "100%", fontSize: "14px" },
-    ".cm-scroller": { fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" },
-  }),
 ];
 
 interface EditorProps {
@@ -39,7 +36,6 @@ export default function Editor({ noteId, initialContent }: EditorProps) {
     noteIdRef.current = noteId;
   }, [noteId]);
 
-  // Create the view once.
   useEffect(() => {
     if (!hostRef.current) return;
 
@@ -70,7 +66,6 @@ export default function Editor({ noteId, initialContent }: EditorProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Swap document when the active note changes, guarding against loops.
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;

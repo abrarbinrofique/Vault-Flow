@@ -8,6 +8,7 @@ import { useVaultStore } from "../../stores/useVaultStore";
 import { debounce } from "../../lib/debounce";
 import { wikilinkAutocomplete } from "./wikilinkComplete";
 import { wikilinkClick } from "./wikilinkClick";
+import { livePreview } from "./livePreview";
 
 const baseExtensions = [
   history(),
@@ -15,6 +16,7 @@ const baseExtensions = [
   markdown(),
   wikilinkAutocomplete(),
   wikilinkClick(),
+  livePreview(),
   EditorView.lineWrapping,
   lineNumbers(),
   EditorView.theme({

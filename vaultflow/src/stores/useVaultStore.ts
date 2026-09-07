@@ -8,6 +8,20 @@ import {
   removeFromLinkIndex,
   updateLinkIndex,
 } from "../lib/linkIndex";
+import {
+  createSearchIndex,
+  remove as removeFromSearch,
+  replaceAll as replaceSearch,
+  search as runSearch,
+  upsert as upsertSearch,
+  type SearchHit,
+} from "../lib/searchIndex";
+
+const searchIndex = createSearchIndex();
+
+export function searchNotes(query: string, limit?: number): SearchHit[] {
+  return runSearch(searchIndex, query, limit);
+}
 
 const FOLDERS_KEY = "folders";
 
@@ -66,6 +80,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     for (const n of list) notes[n.id] = n;
     const folders = (await getMeta<Record<string, Folder>>(FOLDERS_KEY)) ?? {};
     const linkIndex = buildLinkIndex(list);
+    replaceSearch(searchIndex, list);
     set({ notes, folders, loaded: true, linkIndex });
   },
 
@@ -73,6 +88,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 
   createNote: async ({ title, path, content }) => {
     const note = await storage.createFile({ title, path: path ?? "", content });
+    upsertSearch(searchIndex, note);
     set((s) => ({
       notes: { ...s.notes, [note.id]: note },
       activeNoteId: note.id,
@@ -105,6 +121,9 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     await storage.writeFile(renamed);
     await Promise.all(rewritten.map((n) => storage.writeFile(n)));
 
+    upsertSearch(searchIndex, renamed);
+    for (const r of rewritten) upsertSearch(searchIndex, r);
+
     set((s) => {
       const notes = { ...s.notes, [id]: renamed };
       for (const r of rewritten) notes[r.id] = r;
@@ -116,6 +135,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 
   deleteNote: async (id) => {
     await storage.deleteFile(id);
+    removeFromSearch(searchIndex, id);
     set((s) => {
       const next = { ...s.notes };
       delete next[id];
@@ -133,6 +153,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     if (note.content === content) return;
     const updated: Note = { ...note, content, updatedAt: Date.now() };
     await storage.writeFile(updated);
+    upsertSearch(searchIndex, updated);
     set((s) => ({
       notes: { ...s.notes, [id]: updated },
       linkIndex: updateLinkIndex(s.linkIndex, updated),
@@ -204,7 +225,10 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     if (activeNoteId && toDelete.includes(activeNoteId)) activeNoteId = null;
 
     let linkIndex = state.linkIndex;
-    for (const id of toDelete) linkIndex = removeFromLinkIndex(linkIndex, id);
+    for (const id of toDelete) {
+      linkIndex = removeFromLinkIndex(linkIndex, id);
+      removeFromSearch(searchIndex, id);
+    }
 
     set({ folders, notes, activeNoteId, linkIndex });
     await Promise.all(toDelete.map((id) => storage.deleteFile(id)));

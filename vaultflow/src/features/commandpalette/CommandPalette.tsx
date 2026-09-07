@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { searchNotes, useVaultStore } from "../../stores/useVaultStore";
+import { openDailyNote } from "../dailynotes/openDailyNote";
 
 interface Item {
   kind: "note" | "command";
@@ -35,7 +36,19 @@ export default function CommandPalette({ open, onClose }: Props) {
     const q = query.trim();
     const out: Item[] = [];
 
+    const builtins: Item[] = [
+      {
+        kind: "command",
+        id: "cmd:daily",
+        label: "Open today's daily note",
+        hint: "daily",
+        run: () => openDailyNote(),
+      },
+    ];
+
     if (q) {
+      const ql = q.toLowerCase();
+      for (const b of builtins) if (b.label.toLowerCase().includes(ql)) out.push(b);
       const hits = searchNotes(q, 20);
       for (const h of hits) {
         out.push({
@@ -61,6 +74,7 @@ export default function CommandPalette({ open, onClose }: Props) {
         });
       }
     } else {
+      out.push(...builtins);
       const recent = Object.values(notes)
         .sort((a, b) => b.updatedAt - a.updatedAt)
         .slice(0, 20);

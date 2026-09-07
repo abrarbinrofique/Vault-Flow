@@ -143,6 +143,36 @@ function buildDecorations(view: EditorView): DecorationSet {
           return;
         }
 
+        // Horizontal rule: line class + hide/dim the --- or *** marker
+        if (name === "HorizontalRule") {
+          const line = view.state.doc.lineAt(node.from);
+          decos.push(
+            Decoration.line({ class: "cm-md-hr" }).range(line.from),
+          );
+          if (activeLines.has(line.number)) {
+            decos.push(DIM.range(node.from, node.to));
+          } else {
+            decos.push(HIDE.range(node.from, node.to));
+          }
+          return;
+        }
+
+        // Markdown link [text](url) — hide brackets and (url) off active line
+        if (name === "Link") {
+          const line = view.state.doc.lineAt(node.from).number;
+          const isActive = activeLines.has(line);
+          const c = node.node.cursor();
+          if (c.firstChild()) {
+            do {
+              if (c.name === "LinkMark" || c.name === "URL") {
+                if (isActive) decos.push(DIM.range(c.from, c.to));
+                else decos.push(HIDE.range(c.from, c.to));
+              }
+            } while (c.nextSibling());
+          }
+          return;
+        }
+
         // Lists: hanging indent per line + task checkbox widget
         if (name === "ListItem") {
           const startLine = view.state.doc.lineAt(node.from).number;

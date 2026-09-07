@@ -91,6 +91,25 @@ export default function CommandPalette({ open, onClose }: Props) {
         icon: <Icon name="link" size={14} />,
         run: () => useUiStore.getState().toggleLinkHints(),
       },
+      {
+        kind: "command",
+        id: "cmd:clear-vault",
+        label: "Clear vault (delete all notes)",
+        hint: "Danger",
+        icon: <Icon name="trash" size={14} />,
+        run: async () => {
+          const count = Object.keys(useVaultStore.getState().notes).length;
+          if (count === 0) {
+            window.alert("Vault is already empty.");
+            return;
+          }
+          const answer = window.prompt(
+            `This will permanently delete all ${count} note${count === 1 ? "" : "s"} and folder structure from the browser (IndexedDB).\n\nType DELETE to confirm.`,
+          );
+          if (answer !== "DELETE") return;
+          await useVaultStore.getState().clearVault();
+        },
+      },
     ];
 
     if (q) {

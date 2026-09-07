@@ -55,6 +55,8 @@ interface VaultState {
     path: string;
     content: string;
   }[]) => Promise<void>;
+
+  clearVault: () => Promise<void>;
 }
 
 async function persistFolders(folders: Record<string, Folder>) {
@@ -262,6 +264,20 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     await Promise.all(toDelete.map((id) => storage.deleteFile(id)));
     await persistFolders(folders);
     mirrorDeleteFolder(path);
+  },
+
+  clearVault: async () => {
+    const state = get();
+    const ids = Object.keys(state.notes);
+    await Promise.all(ids.map((id) => storage.deleteFile(id)));
+    for (const id of ids) removeFromSearch(searchIndex, id);
+    await persistFolders({});
+    set({
+      notes: {},
+      folders: {},
+      activeNoteId: null,
+      linkIndex: emptyLinkIndex(),
+    });
   },
 
   importFromFolder: async (imported: {

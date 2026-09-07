@@ -1,7 +1,13 @@
 import { create } from "zustand";
-import type { Folder, Note } from "../types";
+import type { Folder, LinkIndex, Note } from "../types";
 import { storage } from "../storage/IndexedDbAdapter";
 import { getMeta, setMeta } from "../storage/db";
+import {
+  buildLinkIndex,
+  emptyLinkIndex,
+  removeFromLinkIndex,
+  updateLinkIndex,
+} from "../lib/linkIndex";
 
 const FOLDERS_KEY = "folders";
 
@@ -10,11 +16,12 @@ interface VaultState {
   folders: Record<string, Folder>;
   activeNoteId: string | null;
   loaded: boolean;
+  linkIndex: LinkIndex;
 
   loadAll: () => Promise<void>;
   setActiveNote: (id: string | null) => void;
 
-  createNote: (input: { title: string; path?: string }) => Promise<Note>;
+  createNote: (input: { title: string; path?: string; content?: string }) => Promise<Note>;
   renameNote: (id: string, newTitle: string) => Promise<void>;
   deleteNote: (id: string) => Promise<void>;
   updateNoteContent: (id: string, content: string) => Promise<void>;
@@ -33,37 +40,78 @@ function joinPath(parent: string | undefined, name: string): string {
   return `${parent}/${name}`;
 }
 
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Rewrite [[oldTitle]] and [[oldTitle|alias]] to use newTitle, case-insensitive on the title. */
+function rewriteWikilinks(content: string, oldTitle: string, newTitle: string): string {
+  const re = new RegExp(
+    `(?<!!)\\[\\[(${escapeRegex(oldTitle)})(\\|[^\\]]+)?\\]\\]`,
+    "gi",
+  );
+  return content.replace(re, (_m, _t, alias) => `[[${newTitle}${alias ?? ""}]]`);
+}
+
 export const useVaultStore = create<VaultState>((set, get) => ({
   notes: {},
   folders: {},
   activeNoteId: null,
   loaded: false,
+  linkIndex: emptyLinkIndex(),
 
   loadAll: async () => {
     const list = await storage.listFiles();
     const notes: Record<string, Note> = {};
     for (const n of list) notes[n.id] = n;
     const folders = (await getMeta<Record<string, Folder>>(FOLDERS_KEY)) ?? {};
-    set({ notes, folders, loaded: true });
+    const linkIndex = buildLinkIndex(list);
+    set({ notes, folders, loaded: true, linkIndex });
   },
 
   setActiveNote: (id) => set({ activeNoteId: id }),
 
-  createNote: async ({ title, path }) => {
-    const note = await storage.createFile({ title, path: path ?? "" });
+  createNote: async ({ title, path, content }) => {
+    const note = await storage.createFile({ title, path: path ?? "", content });
     set((s) => ({
       notes: { ...s.notes, [note.id]: note },
       activeNoteId: note.id,
+      linkIndex: updateLinkIndex(s.linkIndex, note),
     }));
     return note;
   },
 
   renameNote: async (id, newTitle) => {
-    const note = get().notes[id];
-    if (!note) return;
-    const updated: Note = { ...note, title: newTitle, updatedAt: Date.now() };
-    await storage.writeFile(updated);
-    set((s) => ({ notes: { ...s.notes, [id]: updated } }));
+    const state = get();
+    const note = state.notes[id];
+    if (!note || newTitle === note.title) return;
+
+    const oldTitle = note.title;
+    const renamed: Note = { ...note, title: newTitle, updatedAt: Date.now() };
+
+    // Find source notes that link to the old title.
+    const sourceIds = state.linkIndex.backlinks[oldTitle.toLowerCase()] ?? [];
+    const rewritten: Note[] = [];
+    for (const sid of sourceIds) {
+      if (sid === id) continue;
+      const src = state.notes[sid];
+      if (!src) continue;
+      const newContent = rewriteWikilinks(src.content, oldTitle, newTitle);
+      if (newContent !== src.content) {
+        rewritten.push({ ...src, content: newContent, updatedAt: Date.now() });
+      }
+    }
+
+    await storage.writeFile(renamed);
+    await Promise.all(rewritten.map((n) => storage.writeFile(n)));
+
+    set((s) => {
+      const notes = { ...s.notes, [id]: renamed };
+      for (const r of rewritten) notes[r.id] = r;
+      let linkIndex = updateLinkIndex(s.linkIndex, renamed);
+      for (const r of rewritten) linkIndex = updateLinkIndex(linkIndex, r);
+      return { notes, linkIndex };
+    });
   },
 
   deleteNote: async (id) => {
@@ -74,6 +122,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       return {
         notes: next,
         activeNoteId: s.activeNoteId === id ? null : s.activeNoteId,
+        linkIndex: removeFromLinkIndex(s.linkIndex, id),
       };
     });
   },
@@ -84,7 +133,10 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     if (note.content === content) return;
     const updated: Note = { ...note, content, updatedAt: Date.now() };
     await storage.writeFile(updated);
-    set((s) => ({ notes: { ...s.notes, [id]: updated } }));
+    set((s) => ({
+      notes: { ...s.notes, [id]: updated },
+      linkIndex: updateLinkIndex(s.linkIndex, updated),
+    }));
   },
 
   createFolder: async (name, parentPath) => {
@@ -150,7 +202,11 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     }
     let activeNoteId = state.activeNoteId;
     if (activeNoteId && toDelete.includes(activeNoteId)) activeNoteId = null;
-    set({ folders, notes, activeNoteId });
+
+    let linkIndex = state.linkIndex;
+    for (const id of toDelete) linkIndex = removeFromLinkIndex(linkIndex, id);
+
+    set({ folders, notes, activeNoteId, linkIndex });
     await Promise.all(toDelete.map((id) => storage.deleteFile(id)));
     await persistFolders(folders);
   },

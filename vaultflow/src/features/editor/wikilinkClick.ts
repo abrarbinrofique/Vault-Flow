@@ -12,7 +12,7 @@ const WIKILINK_RE = /(?<!!)\[\[([^\]|#]+)(?:\|([^\]]+))?\]\]/g;
 
 const linkMark = Decoration.mark({
   class: "cm-wikilink",
-  attributes: { title: "Cmd/Ctrl+click to open" },
+  attributes: { title: "Click to open (Alt+click to place cursor)" },
 });
 
 function buildDecorations(view: EditorView): DecorationSet {
@@ -71,7 +71,8 @@ export function wikilinkClick(): Extension {
       decorations: (v) => v.decorations,
       eventHandlers: {
         mousedown(event, view) {
-          if (!(event.metaKey || event.ctrlKey)) return;
+          if (event.button !== 0) return;
+          if (event.altKey) return; // hold Alt to place cursor without navigating
           const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
           if (pos == null) return;
           const title = titleAtPos(view, pos);

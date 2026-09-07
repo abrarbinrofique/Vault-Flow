@@ -10,7 +10,63 @@ body,
 
 html {
   color-scheme: light;
+  --vf-bg: #ffffff;
+  --vf-panel: #f8fafc;
+  --vf-fg: #111827;
+  --vf-muted: #6b7280;
+  --vf-border: #e5e7eb;
+  --vf-accent: #2563eb;
 }
 html[data-theme="dark"] {
   color-scheme: dark;
+  --vf-bg: #0b0f19;
+  --vf-panel: #111827;
+  --vf-fg: #e5e7eb;
+  --vf-muted: #9ca3af;
+  --vf-border: #1f2937;
+  --vf-accent: #60a5fa;
+}
+
+body {
+  background: var(--vf-bg);
+  color: var(--vf-fg);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+/* CodeMirror integration with theme vars */
+.cm-editor {
+  background: var(--vf-bg);
+  color: var(--vf-fg);
+}
+.cm-editor .cm-gutters {
+  background: var(--vf-panel);
+  color: var(--vf-muted);
+  border-right: 1px solid var(--vf-border);
+}
+.cm-editor .cm-activeLine {
+  background: color-mix(in oklab, var(--vf-accent) 8%, transparent);
+}
+.cm-editor .cm-activeLineGutter {
+  background: color-mix(in oklab, var(--vf-accent) 12%, transparent);
+}
+.cm-editor .cm-cursor,
+.cm-editor .cm-dropCursor {
+  border-left-color: var(--vf-accent);
+}
+.cm-editor .cm-selectionBackground,
+.cm-editor.cm-focused .cm-selectionBackground,
+.cm-editor ::selection {
+  background: color-mix(in oklab, var(--vf-accent) 25%, transparent) !important;
+}
+
+/* Autocomplete popup */
+.cm-tooltip.cm-tooltip-autocomplete {
+  background: var(--vf-panel);
+  color: var(--vf-fg);
+  border: 1px solid var(--vf-border);
+  border-radius: 6px;
+}
+.cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
+  background: var(--vf-accent);
+  color: white;
 }

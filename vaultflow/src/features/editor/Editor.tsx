@@ -13,11 +13,13 @@ import { livePreview } from "./livePreview";
 import { proseStyling } from "./prose";
 import { codeCopyButtons } from "./codeCopy";
 import { linkHints } from "./linkHints";
+import { tableKeymap } from "./tableKeymap";
 import { takePendingCursor } from "./pendingCursor";
 import { registerEditor, unregisterEditor } from "./focusedEditor";
 
 const baseExtensions = [
   history(),
+  tableKeymap,
   keymap.of([...defaultKeymap, ...historyKeymap, ...completionKeymap]),
   markdown({ extensions: [GFM] }),
   proseStyling(),

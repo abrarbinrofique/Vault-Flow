@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { useVaultStore } from "../../stores/useVaultStore";
 import { useUiStore } from "../../stores/useUiStore";
 import Icon from "../../components/Icon";
+import { isTemplatePath } from "../../lib/templates";
 
 // Muted palette that reads on both themes; deterministic per folder.
 const PALETTE = [
@@ -146,7 +147,9 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
   const data = useMemo(() => {
     const cutoff =
       timelineOn && cutoffMs !== null ? cutoffMs : Number.POSITIVE_INFINITY;
-    const visible = Object.values(notes).filter((n) => n.createdAt <= cutoff);
+    const visible = Object.values(notes).filter(
+      (n) => !isTemplatePath(n.path) && n.createdAt <= cutoff,
+    );
     const visibleIds = new Set(visible.map((n) => n.id));
 
     const titleToId = new Map<string, string>();

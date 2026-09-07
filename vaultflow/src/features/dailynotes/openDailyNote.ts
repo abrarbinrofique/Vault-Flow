@@ -1,5 +1,8 @@
 import { format } from "date-fns";
 import { useVaultStore } from "../../stores/useVaultStore";
+import { substituteTemplate } from "../../lib/templates";
+import { setPendingCursor } from "../editor/pendingCursor";
+import { findTemplateByName } from "../templates/newFromTemplate";
 
 const DAILY_FOLDER = "Daily";
 
@@ -18,6 +21,18 @@ export async function openDailyNote(date: Date = new Date()): Promise<void> {
   if (!state.folders[DAILY_FOLDER]) {
     await state.createFolder(DAILY_FOLDER);
   }
-  const heading = `# ${format(date, "EEEE, MMMM d, yyyy")}\n\n`;
-  await state.createNote({ title, path: DAILY_FOLDER, content: heading });
+
+  const template = findTemplateByName("Daily");
+  let content: string;
+  let cursor: number | null = null;
+  if (template) {
+    const r = substituteTemplate(template.content, { title, now: date });
+    content = r.content;
+    cursor = r.cursor;
+  } else {
+    content = `# ${format(date, "EEEE, MMMM d, yyyy")}\n\n`;
+  }
+
+  const created = await state.createNote({ title, path: DAILY_FOLDER, content });
+  if (cursor !== null) setPendingCursor(created.id, cursor);
 }

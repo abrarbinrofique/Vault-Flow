@@ -4,6 +4,10 @@ import { searchNotes, useVaultStore } from "../../stores/useVaultStore";
 import { snippetFor } from "../../lib/searchIndex";
 import { openDailyNote } from "../dailynotes/openDailyNote";
 import { useUiStore } from "../../stores/useUiStore";
+import {
+  listTemplates,
+  promptAndCreateFromTemplate,
+} from "../templates/newFromTemplate";
 
 interface HighlightedSnippet {
   before: string;
@@ -81,6 +85,16 @@ export default function CommandPalette({ open, onClose }: Props) {
         icon: <Icon name="calendar" size={14} />,
         run: () => openDailyNote(),
       },
+      ...listTemplates().map<Item>((tpl) => ({
+        kind: "command" as const,
+        id: `tpl:${tpl.id}`,
+        label: `New from template: ${tpl.title}`,
+        hint: "Template",
+        icon: <Icon name="file" size={14} />,
+        run: async () => {
+          await promptAndCreateFromTemplate(tpl);
+        },
+      })),
       {
         kind: "command",
         id: "cmd:toggle-linkhints",

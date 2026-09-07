@@ -13,6 +13,7 @@ import { livePreview } from "./livePreview";
 import { proseStyling } from "./prose";
 import { codeCopyButtons } from "./codeCopy";
 import { linkHints } from "./linkHints";
+import { takePendingCursor } from "./pendingCursor";
 
 const baseExtensions = [
   history(),
@@ -75,10 +76,17 @@ export default function Editor({ noteId, initialContent }: EditorProps) {
     const view = viewRef.current;
     if (!view) return;
     const current = view.state.doc.toString();
-    if (current === initialContent) return;
-    view.dispatch({
-      changes: { from: 0, to: view.state.doc.length, insert: initialContent },
-    });
+    const pending = takePendingCursor(noteId);
+    if (current !== initialContent) {
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: initialContent },
+      });
+    }
+    if (pending !== null) {
+      const safe = Math.max(0, Math.min(view.state.doc.length, pending));
+      view.dispatch({ selection: { anchor: safe } });
+      setTimeout(() => view.focus(), 0);
+    }
   }, [noteId, initialContent]);
 
   return <div ref={hostRef} className="h-full w-full" />;

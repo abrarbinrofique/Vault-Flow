@@ -1,5 +1,6 @@
 import type { LinkIndex, Note } from "../types";
 import { parseTags, parseWikilinks } from "./markdown";
+import { isTemplatePath } from "./templates";
 
 export function emptyLinkIndex(): LinkIndex {
   return { outbound: {}, backlinks: {}, tags: {} };
@@ -53,6 +54,8 @@ function stripNote(prev: LinkIndex, noteId: string): LinkIndex {
 }
 
 function applyNote(idx: LinkIndex, note: Note): void {
+  // Templates are scaffolding, not knowledge — skip them from the link/tag graph.
+  if (isTemplatePath(note.path)) return;
   const links = parseWikilinks(note.content);
   const titles = links.map((l) => l.title);
   if (titles.length) idx.outbound[note.id] = titles;

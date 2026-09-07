@@ -1,8 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../../components/Icon";
 import { searchNotes, useVaultStore } from "../../stores/useVaultStore";
+import { snippetFor } from "../../lib/searchIndex";
 import { openDailyNote } from "../dailynotes/openDailyNote";
 import { useUiStore } from "../../stores/useUiStore";
+
+interface HighlightedSnippet {
+  before: string;
+  match: string;
+  after: string;
+}
 
 interface Item {
   kind: "note" | "command";
@@ -10,6 +17,7 @@ interface Item {
   label: string;
   hint?: string;
   icon: React.ReactNode;
+  snippet?: HighlightedSnippet;
   run: () => void | Promise<void>;
 }
 
@@ -18,25 +26,41 @@ interface Props {
   onClose: () => void;
 }
 
+const DEBOUNCE_MS = 150;
+
 export default function CommandPalette({ open, onClose }: Props) {
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [index, setIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const setActiveNote = useVaultStore((s) => s.setActiveNote);
   const createNote = useVaultStore((s) => s.createNote);
   const notes = useVaultStore((s) => s.notes);
 
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (open) {
+    if (open && !wasOpen.current) {
+      // Just opened — reset input & focus. Guard with a ref so we don't
+      // fire on re-renders while already open.
       setQuery("");
+      setDebouncedQuery("");
       setIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 0);
+      inputRef.current?.focus();
     }
+    wasOpen.current = open;
   }, [open]);
+
+  // Debounce the query so we don't run MiniSearch (and snippet extraction)
+  // on every keystroke.
+  useEffect(() => {
+    if (query === debouncedQuery) return;
+    const t = setTimeout(() => setDebouncedQuery(query), DEBOUNCE_MS);
+    return () => clearTimeout(t);
+  }, [query, debouncedQuery]);
 
   const items = useMemo<Item[]>(() => {
     if (!open) return [];
-    const q = query.trim();
+    const q = debouncedQuery.trim();
     const out: Item[] = [];
 
     const builtins: Item[] = [
@@ -61,17 +85,27 @@ export default function CommandPalette({ open, onClose }: Props) {
     if (q) {
       const ql = q.toLowerCase();
       for (const b of builtins) if (b.label.toLowerCase().includes(ql)) out.push(b);
-      const hits = searchNotes(q, 20);
+
+      const hits = searchNotes(q, 25);
       for (const h of hits) {
+        const note = notes[h.id];
+        // Only include a snippet for content-only matches — title matches
+        // don't need a body preview since the title itself already shows the hit.
+        const snippet =
+          note && !h.matchedInTitle && h.matchedInContent
+            ? (snippetFor(note.content, h.matchedTerms) ?? undefined)
+            : undefined;
         out.push({
           kind: "note",
           id: h.id,
           label: h.title,
-          hint: "Note",
+          hint: h.matchedInTitle ? "Title" : "Body",
           icon: <Icon name="file" size={14} />,
+          snippet,
           run: () => setActiveNote(h.id),
         });
       }
+
       const exact = Object.values(notes).some(
         (n) => n.title.toLowerCase() === q.toLowerCase(),
       );
@@ -104,7 +138,7 @@ export default function CommandPalette({ open, onClose }: Props) {
       }
     }
     return out;
-  }, [open, query, notes, setActiveNote, createNote]);
+  }, [open, debouncedQuery, notes, setActiveNote, createNote]);
 
   const activeIndex = Math.min(index, Math.max(0, items.length - 1));
 
@@ -160,13 +194,13 @@ export default function CommandPalette({ open, onClose }: Props) {
                 await pick(activeIndex);
               }
             }}
-            placeholder="Search notes or type to create…"
+            placeholder="Search titles, body, or type to create…"
             className="w-full bg-transparent text-[14px] outline-none"
             style={{ color: "var(--vf-fg)" }}
           />
           <span className="vf-kbd">Esc</span>
         </div>
-        <div className="max-h-[360px] overflow-y-auto p-1">
+        <div className="max-h-[420px] overflow-y-auto p-1">
           {items.length === 0 ? (
             <div
               className="px-4 py-6 text-center text-[13px]"
@@ -182,24 +216,44 @@ export default function CommandPalette({ open, onClose }: Props) {
                   key={it.id}
                   onClick={() => void pick(i)}
                   onMouseMove={() => setIndex(i)}
-                  className="flex w-full items-center gap-2 rounded px-3 text-left text-[13px]"
+                  className="flex w-full items-start gap-2 rounded px-3 py-2 text-left text-[13px]"
                   style={{
-                    height: 34,
                     background: active ? "var(--vf-accent-soft)" : "transparent",
                     color: "var(--vf-fg)",
                     transition: "background-color 120ms ease",
                   }}
                 >
                   <span
+                    className="mt-0.5"
                     style={{
                       color: active ? "var(--vf-accent)" : "var(--vf-muted)",
                     }}
                   >
                     {it.icon}
                   </span>
-                  <span className="flex-1 truncate">{it.label}</span>
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate">{it.label}</span>
+                    {it.snippet && (
+                      <span
+                        className="mt-0.5 line-clamp-1 text-[11.5px]"
+                        style={{ color: "var(--vf-muted)" }}
+                      >
+                        {it.snippet.before}
+                        <mark
+                          style={{
+                            background: "transparent",
+                            color: "var(--vf-accent)",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {it.snippet.match}
+                        </mark>
+                        {it.snippet.after}
+                      </span>
+                    )}
+                  </span>
                   <span
-                    className="text-[11px]"
+                    className="ml-2 shrink-0 text-[11px]"
                     style={{ color: "var(--vf-subtle)" }}
                   >
                     {it.hint}

@@ -1,5 +1,6 @@
 import Editor from "./Editor";
 import BacklinksPanel from "../backlinks/BacklinksPanel";
+import UnlinkedMentions from "../backlinks/UnlinkedMentions";
 import { useVaultStore } from "../../stores/useVaultStore";
 
 interface Props {
@@ -31,7 +32,12 @@ export default function NotePane({ noteId, showBacklinks = true, right }: Props)
       <div className="flex-1 overflow-hidden">
         <Editor noteId={note.id} initialContent={note.content} />
       </div>
-      {showBacklinks && <BacklinksPanel noteId={note.id} />}
+      {showBacklinks && (
+        <>
+          <BacklinksPanel noteId={note.id} />
+          <UnlinkedMentions noteId={note.id} />
+        </>
+      )}
     </div>
   );
 }

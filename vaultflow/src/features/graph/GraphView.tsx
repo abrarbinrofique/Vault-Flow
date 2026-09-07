@@ -84,6 +84,7 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
   const fgRef = useRef<FGRef | null>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [hoverId, setHoverId] = useState<string | null>(null);
+  const [mode, setMode] = useState<"cursor" | "hand">("cursor");
 
   const chrome = useMemo(() => {
     return {
@@ -181,6 +182,23 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
     return () => clearTimeout(t);
   }, [data.nodes.length]);
 
+  // In cursor mode we disable the library's built-in pan/zoom (which is a
+  // single d3-zoom behavior) and wire our own wheel-to-zoom so users still
+  // get smooth scroll-zoom without accidental panning on empty space.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || mode !== "cursor") return;
+    const onWheel = (e: WheelEvent) => {
+      if (!fgRef.current) return;
+      e.preventDefault();
+      const current = (fgRef.current.zoom() as number) || 1;
+      const factor = e.deltaY > 0 ? 0.9 : 1.1;
+      fgRef.current.zoom(current * factor, 120);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [mode]);
+
   const radiusFor = (deg: number, active: boolean) =>
     (active ? 5 : 3.5) + Math.min(6, Math.sqrt(deg) * 1.6);
 
@@ -244,7 +262,11 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
         </button>
       </div>
 
-      <div ref={containerRef} className="relative flex-1 overflow-hidden">
+      <div
+        ref={containerRef}
+        className="relative flex-1 overflow-hidden"
+        style={{ cursor: mode === "hand" ? "grab" : "default" }}
+      >
         <div
           className="pointer-events-none absolute inset-0"
           style={{
@@ -261,6 +283,9 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
             backgroundColor="rgba(0,0,0,0)"
             nodeRelSize={5}
             cooldownTicks={80}
+            enableZoomInteraction={mode === "hand"}
+            enablePanInteraction={mode === "hand"}
+            enableNodeDrag={true}
             linkColor={(link) => {
               const s = link.source as unknown as GNode;
               const t = link.target as unknown as GNode;
@@ -340,6 +365,55 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
             boxShadow: "var(--vf-shadow-md)",
           }}
         >
+          <button
+            className="vf-icon-btn"
+            style={{
+              borderRadius: 0,
+              color:
+                mode === "cursor" ? "var(--vf-accent)" : "var(--vf-muted)",
+            }}
+            onClick={() => setMode("cursor")}
+            aria-label="Cursor mode"
+            title="Cursor — drag nodes only"
+          >
+            <svg
+              width={14}
+              height={14}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M4 4l7 16 2-7 7-2z" />
+            </svg>
+          </button>
+          <div style={{ height: 1, background: "var(--vf-border)" }} />
+          <button
+            className="vf-icon-btn"
+            style={{
+              borderRadius: 0,
+              color: mode === "hand" ? "var(--vf-accent)" : "var(--vf-muted)",
+            }}
+            onClick={() => setMode("hand")}
+            aria-label="Pan mode"
+            title="Hand — drag canvas to pan"
+          >
+            <svg
+              width={14}
+              height={14}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M6 11V6a1.5 1.5 0 1 1 3 0v4M9 10V4.5a1.5 1.5 0 1 1 3 0V10M12 10V5a1.5 1.5 0 1 1 3 0v6M15 11V7.5a1.5 1.5 0 1 1 3 0V15a6 6 0 0 1-6 6h-2c-2 0-3-1-4-2l-4-6c-.5-1 .5-2 1.5-1.5L6 13" />
+            </svg>
+          </button>
+          <div style={{ height: 1, background: "var(--vf-border)" }} />
           <button
             className="vf-icon-btn"
             style={{ borderRadius: 0 }}

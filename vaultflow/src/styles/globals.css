@@ -11,6 +11,7 @@ html {
   /* Surfaces */
   --vf-bg: #ffffff;
   --vf-surface: #fafafa;
+  --vf-surface-raised: #f4f5f7;
   --vf-surface-hover: #f4f4f5;
   --vf-surface-active: #ececee;
   --vf-sidebar: #fafafa;
@@ -62,7 +63,8 @@ html[data-theme="dark"] {
   color-scheme: dark;
 
   --vf-bg: #101115;
-  --vf-surface: #16181d;
+  --vf-surface: #14161b;
+  --vf-surface-raised: #191c22;
   --vf-surface-hover: #1c1f26;
   --vf-surface-active: #23262e;
   --vf-sidebar: #0c0d10;

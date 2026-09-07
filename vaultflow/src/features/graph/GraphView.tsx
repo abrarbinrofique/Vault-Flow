@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import ForceGraph2D from "react-force-graph-2d";
+import { format } from "date-fns";
 import { useVaultStore } from "../../stores/useVaultStore";
 import { useUiStore } from "../../stores/useUiStore";
 import Icon from "../../components/Icon";
@@ -85,6 +86,11 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [mode, setMode] = useState<"cursor" | "hand">("cursor");
+  const [timelineOn, setTimelineOn] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [cutoffMs, setCutoffMs] = useState<number | null>(null);
+  const appearedAtRef = useRef<Map<string, number>>(new Map());
+  const rafRef = useRef<number | null>(null);
 
   const chrome = useMemo(() => {
     return {
@@ -128,16 +134,31 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
     return m;
   }, [notes]);
 
+  const [minT, maxT] = useMemo(() => {
+    const times = Object.values(notes).map((n) => n.createdAt);
+    if (times.length === 0) {
+      const now = Date.now();
+      return [now, now];
+    }
+    return [Math.min(...times), Math.max(Date.now(), ...times)];
+  }, [notes]);
+
   const data = useMemo(() => {
+    const cutoff =
+      timelineOn && cutoffMs !== null ? cutoffMs : Number.POSITIVE_INFINITY;
+    const visible = Object.values(notes).filter((n) => n.createdAt <= cutoff);
+    const visibleIds = new Set(visible.map((n) => n.id));
+
     const titleToId = new Map<string, string>();
-    for (const n of Object.values(notes)) titleToId.set(n.title.toLowerCase(), n.id);
+    for (const n of visible) titleToId.set(n.title.toLowerCase(), n.id);
 
     const degree = new Map<string, number>();
     const links: GLink[] = [];
     for (const [sourceId, titles] of Object.entries(outbound)) {
+      if (!visibleIds.has(sourceId)) continue;
       for (const t of titles) {
         const targetId = titleToId.get(t.toLowerCase());
-        if (targetId && targetId !== sourceId) {
+        if (targetId && targetId !== sourceId && visibleIds.has(targetId)) {
           links.push({ source: sourceId, target: targetId });
           degree.set(sourceId, (degree.get(sourceId) ?? 0) + 1);
           degree.set(targetId, (degree.get(targetId) ?? 0) + 1);
@@ -145,7 +166,7 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
       }
     }
 
-    const nodes: GNode[] = Object.values(notes).map((n) => {
+    const nodes: GNode[] = visible.map((n) => {
       const group = topFolder(n.path);
       const kind: "note" | "daily" = group === "Daily" ? "daily" : "note";
       let color: string;
@@ -162,7 +183,70 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
       };
     });
     return { nodes, links };
-  }, [notes, outbound, folderColor, chrome.rootHue]);
+  }, [notes, outbound, folderColor, chrome.rootHue, timelineOn, cutoffMs]);
+
+  // Track first-appearance timestamp for each visible node so we can fade
+  // newly appeared nodes in during timeline playback.
+  useEffect(() => {
+    if (!timelineOn) {
+      appearedAtRef.current.clear();
+      return;
+    }
+    const now = performance.now();
+    const seen = new Set<string>();
+    for (const n of data.nodes) {
+      seen.add(n.id);
+      if (!appearedAtRef.current.has(n.id)) appearedAtRef.current.set(n.id, now);
+    }
+    for (const id of [...appearedAtRef.current.keys()]) {
+      if (!seen.has(id)) appearedAtRef.current.delete(id);
+    }
+  }, [data, timelineOn]);
+
+  // Enter / exit timeline mode: initialize / reset cutoff and stop playback.
+  useEffect(() => {
+    if (timelineOn) {
+      appearedAtRef.current.clear();
+      setCutoffMs(minT);
+    } else {
+      setCutoffMs(null);
+      setIsPlaying(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timelineOn]);
+
+  // Play loop: throttle state updates to ~10 Hz so we don't rebuild graphData
+  // every animation frame. react-force-graph needs a new graphData object to
+  // reflect visibility changes, so 10 Hz is the sweet spot.
+  useEffect(() => {
+    if (!isPlaying) return;
+    const startTime = performance.now();
+    const startCutoff = cutoffMs ?? minT;
+    const durationMs = 10_000;
+    const span = maxT - minT;
+    let lastSet = 0;
+    const step = (now: number) => {
+      const elapsed = now - startTime;
+      const nextCutoff = Math.min(
+        maxT,
+        startCutoff + (elapsed / durationMs) * span,
+      );
+      if (now - lastSet >= 100 || nextCutoff >= maxT) {
+        lastSet = now;
+        setCutoffMs(nextCutoff);
+      }
+      if (nextCutoff >= maxT) {
+        setIsPlaying(false);
+        return;
+      }
+      rafRef.current = requestAnimationFrame(step);
+    };
+    rafRef.current = requestAnimationFrame(step);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying]);
 
   const neighborsById = useMemo(() => {
     const m = new Map<string, Set<string>>();
@@ -347,6 +431,16 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
                 ctx.fillText(n.name, n.x + r + 4, n.y);
               }
 
+              // Fade-in newly appeared nodes during timeline playback.
+              if (timelineOn) {
+                const appeared = appearedAtRef.current.get(n.id);
+                if (appeared !== undefined) {
+                  const dt = performance.now() - appeared;
+                  const fade = Math.min(1, dt / 500);
+                  ctx.globalAlpha = alpha * fade;
+                }
+              }
+
               ctx.globalAlpha = 1;
             }}
             onNodeClick={(node) => {
@@ -464,7 +558,144 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
               <path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6" />
             </svg>
           </button>
+          <div style={{ height: 1, background: "var(--vf-border)" }} />
+          <button
+            className="vf-icon-btn"
+            style={{
+              borderRadius: 0,
+              color: timelineOn ? "var(--vf-accent)" : "var(--vf-muted)",
+            }}
+            onClick={() => setTimelineOn((v) => !v)}
+            aria-label="Timeline mode"
+            title="Timeline — watch the vault grow"
+          >
+            <svg
+              width={14}
+              height={14}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v5l3 2" />
+            </svg>
+          </button>
         </div>
+
+        {timelineOn && cutoffMs !== null && maxT > minT && (
+          <div
+            className="absolute left-1/2 -translate-x-1/2"
+            style={{
+              bottom: 24,
+              width: "min(640px, calc(100% - 48px))",
+              background: "var(--vf-surface)",
+              border: "1px solid var(--vf-border)",
+              borderRadius: "var(--vf-radius-lg)",
+              boxShadow: "var(--vf-shadow-md)",
+              padding: "10px 14px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+            }}
+          >
+            <div
+              className="flex items-center justify-between text-[11px]"
+              style={{ color: "var(--vf-muted)" }}
+            >
+              <span>
+                {data.nodes.length}
+                {" / "}
+                {Object.keys(notes).length} notes
+              </span>
+              <span
+                className="font-medium"
+                style={{ color: "var(--vf-fg)" }}
+              >
+                {format(new Date(cutoffMs), "MMM d, yyyy")}
+              </span>
+              <span>
+                {format(new Date(minT), "MMM yyyy")}
+                {" — "}
+                {format(new Date(maxT), "MMM yyyy")}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                className="vf-icon-btn"
+                onClick={() => {
+                  if (cutoffMs >= maxT) {
+                    setCutoffMs(minT);
+                    appearedAtRef.current.clear();
+                  }
+                  setIsPlaying((v) => !v);
+                }}
+                aria-label={isPlaying ? "Pause" : "Play"}
+                title={isPlaying ? "Pause" : "Play"}
+              >
+                {isPlaying ? (
+                  <svg
+                    width={14}
+                    height={14}
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <rect x="6" y="5" width="4" height="14" rx="1" />
+                    <rect x="14" y="5" width="4" height="14" rx="1" />
+                  </svg>
+                ) : (
+                  <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M7 5v14l12-7z" />
+                  </svg>
+                )}
+              </button>
+              <input
+                type="range"
+                min={minT}
+                max={maxT}
+                step={Math.max(1, Math.floor((maxT - minT) / 500))}
+                value={cutoffMs}
+                onChange={(e) => {
+                  setIsPlaying(false);
+                  const v = Number(e.target.value);
+                  // Scrubbing backward should reset the appearance timers for
+                  // nodes that vanish, so replaying forward re-fades them.
+                  if (v < (cutoffMs ?? minT)) appearedAtRef.current.clear();
+                  setCutoffMs(v);
+                }}
+                className="vf-timeline-slider"
+                style={{ flex: 1 }}
+                aria-label="Timeline cutoff"
+              />
+              <button
+                className="vf-icon-btn"
+                onClick={() => {
+                  setIsPlaying(false);
+                  setCutoffMs(minT);
+                  appearedAtRef.current.clear();
+                }}
+                aria-label="Reset to start"
+                title="Reset"
+              >
+                <svg
+                  width={14}
+                  height={14}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+                  <path d="M3 3v5h5" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

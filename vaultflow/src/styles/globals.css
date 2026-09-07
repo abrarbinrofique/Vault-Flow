@@ -294,6 +294,38 @@ button {
   min-height: 1em;
 }
 
+/* Timeline slider for graph view */
+.vf-timeline-slider {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 4px;
+  background: var(--vf-border-strong);
+  border-radius: 999px;
+  outline: none;
+}
+.vf-timeline-slider::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--vf-accent);
+  border: 2px solid var(--vf-bg);
+  cursor: pointer;
+  transition: transform 120ms ease;
+}
+.vf-timeline-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+.vf-timeline-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--vf-accent);
+  border: 2px solid var(--vf-bg);
+  cursor: pointer;
+}
+
 /* Inline link hints: dashed underline suggesting a wikilink conversion */
 .cm-editor .cm-link-hint {
   border-bottom: 1px dashed var(--vf-muted);

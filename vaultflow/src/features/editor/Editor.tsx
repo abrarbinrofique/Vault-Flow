@@ -14,6 +14,7 @@ import { proseStyling } from "./prose";
 import { codeCopyButtons } from "./codeCopy";
 import { linkHints } from "./linkHints";
 import { takePendingCursor } from "./pendingCursor";
+import { registerEditor, unregisterEditor } from "./focusedEditor";
 
 const baseExtensions = [
   history(),
@@ -63,9 +64,11 @@ export default function Editor({ noteId, initialContent }: EditorProps) {
       parent: hostRef.current,
     });
     viewRef.current = view;
+    registerEditor(view);
 
     return () => {
       persist.flush();
+      unregisterEditor(view);
       view.destroy();
       viewRef.current = null;
     };

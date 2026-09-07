@@ -9,6 +9,7 @@ import {
   promptAndCreateFromTemplate,
 } from "../templates/newFromTemplate";
 import { useSmartStore } from "../../stores/useSmartStore";
+import { insertTableAtCursor } from "../editor/insertTable";
 
 interface HighlightedSnippet {
   before: string;
@@ -85,6 +86,17 @@ export default function CommandPalette({ open, onClose }: Props) {
         hint: "Command",
         icon: <Icon name="calendar" size={14} />,
         run: () => openDailyNote(),
+      },
+      {
+        kind: "command",
+        id: "cmd:insert-table",
+        label: "Insert table",
+        hint: "Command",
+        icon: <Icon name="more" size={14} />,
+        run: () => {
+          if (!insertTableAtCursor())
+            window.alert("Focus an editor first, then run this command.");
+        },
       },
       ...listTemplates().map<Item>((tpl) => ({
         kind: "command" as const,

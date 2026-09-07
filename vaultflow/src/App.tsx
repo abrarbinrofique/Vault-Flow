@@ -1,12 +1,12 @@
 import { useEffect } from "react";
 import FileTree from "./features/filetree/FileTree";
+import Editor from "./features/editor/Editor";
 import { useVaultStore } from "./stores/useVaultStore";
 import { useUiStore } from "./stores/useUiStore";
 
 export default function App() {
   const loadAll = useVaultStore((s) => s.loadAll);
   const loaded = useVaultStore((s) => s.loaded);
-  const activeNoteId = useVaultStore((s) => s.activeNoteId);
   const activeNote = useVaultStore((s) =>
     s.activeNoteId ? s.notes[s.activeNoteId] : null,
   );
@@ -40,8 +40,8 @@ export default function App() {
             <div className="border-b border-neutral-200 px-4 py-2 text-sm dark:border-neutral-800">
               {activeNote.title}
             </div>
-            <div className="flex-1 overflow-auto p-4 text-sm opacity-70">
-              Editor coming in phase 1(e). Active note id: {activeNoteId}
+            <div className="flex-1 overflow-hidden">
+              <Editor noteId={activeNote.id} initialContent={activeNote.content} />
             </div>
           </div>
         ) : (

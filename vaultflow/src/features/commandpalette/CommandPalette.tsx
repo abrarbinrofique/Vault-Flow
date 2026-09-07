@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../../components/Icon";
 import { searchNotes, useVaultStore } from "../../stores/useVaultStore";
 import { openDailyNote } from "../dailynotes/openDailyNote";
+import { useUiStore } from "../../stores/useUiStore";
 
 interface Item {
   kind: "note" | "command";
@@ -39,6 +40,14 @@ export default function CommandPalette({ open, onClose }: Props) {
     const out: Item[] = [];
 
     const builtins: Item[] = [
+      {
+        kind: "command",
+        id: "cmd:capture",
+        label: "Quick capture to Inbox",
+        hint: "Ctrl+Shift+Space",
+        icon: <Icon name="plus" size={14} />,
+        run: () => useUiStore.getState().openQuickCapture(),
+      },
       {
         kind: "command",
         id: "cmd:daily",
@@ -97,9 +106,7 @@ export default function CommandPalette({ open, onClose }: Props) {
     return out;
   }, [open, query, notes, setActiveNote, createNote]);
 
-  useEffect(() => {
-    if (index >= items.length) setIndex(Math.max(0, items.length - 1));
-  }, [items, index]);
+  const activeIndex = Math.min(index, Math.max(0, items.length - 1));
 
   if (!open) return null;
 
@@ -150,7 +157,7 @@ export default function CommandPalette({ open, onClose }: Props) {
                 setIndex((i) => Math.max(0, i - 1));
               } else if (e.key === "Enter") {
                 e.preventDefault();
-                await pick(index);
+                await pick(activeIndex);
               }
             }}
             placeholder="Search notes or type to create…"
@@ -169,7 +176,7 @@ export default function CommandPalette({ open, onClose }: Props) {
             </div>
           ) : (
             items.map((it, i) => {
-              const active = i === index;
+              const active = i === activeIndex;
               return (
                 <button
                   key={it.id}

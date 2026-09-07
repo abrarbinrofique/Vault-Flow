@@ -7,6 +7,7 @@ import GraphView from "./features/graph/GraphView";
 import EmptyState from "./features/editor/EmptyState";
 import FolderStatus from "./features/folder/FolderStatus";
 import VaultActions from "./features/folder/VaultActions";
+import { QuickCaptureHost } from "./features/capture/QuickCapture";
 import Icon from "./components/Icon";
 import { useVaultStore } from "./stores/useVaultStore";
 import { useUiStore } from "./stores/useUiStore";
@@ -61,6 +62,15 @@ export default function App() {
       if ((e.metaKey || e.ctrlKey) && e.key === "\\") {
         e.preventDefault();
         toggleSidebar();
+      }
+      // Quick capture: Ctrl/Cmd+Shift+Space (Ctrl+Shift+N is browser-reserved).
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.shiftKey &&
+        (e.code === "Space" || e.key === " ")
+      ) {
+        e.preventDefault();
+        useUiStore.getState().openQuickCapture();
       }
     };
     window.addEventListener("keydown", onKey);
@@ -227,6 +237,7 @@ export default function App() {
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       {graphOpen && <GraphView onClose={() => setGraphOpen(false)} />}
+      <QuickCaptureHost />
     </div>
   );
 }

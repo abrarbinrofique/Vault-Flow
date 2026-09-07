@@ -10,12 +10,15 @@ interface UiState {
   tagFilter: string | null;
   splitNoteId: string | null;
   sidebarCollapsed: boolean;
+  quickCaptureOpen: boolean;
   loadTheme: () => Promise<void>;
   toggleTheme: () => Promise<void>;
   setTagFilter: (tag: string | null) => void;
   openSplit: (noteId: string) => void;
   closeSplit: () => void;
   toggleSidebar: () => void;
+  openQuickCapture: () => void;
+  closeQuickCapture: () => void;
 }
 
 function applyTheme(theme: Theme) {
@@ -31,6 +34,9 @@ export const useUiStore = create<UiState>((set, get) => ({
   closeSplit: () => set({ splitNoteId: null }),
   sidebarCollapsed: false,
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+  quickCaptureOpen: false,
+  openQuickCapture: () => set({ quickCaptureOpen: true }),
+  closeQuickCapture: () => set({ quickCaptureOpen: false }),
   loadTheme: async () => {
     const stored = (await getMeta<Theme>(THEME_KEY)) ?? "light";
     applyTheme(stored);

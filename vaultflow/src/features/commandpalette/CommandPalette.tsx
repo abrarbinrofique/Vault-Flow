@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import Icon from "../../components/Icon";
 import { searchNotes, useVaultStore } from "../../stores/useVaultStore";
 import { openDailyNote } from "../dailynotes/openDailyNote";
 
@@ -7,6 +8,7 @@ interface Item {
   id: string;
   label: string;
   hint?: string;
+  icon: React.ReactNode;
   run: () => void | Promise<void>;
 }
 
@@ -41,7 +43,8 @@ export default function CommandPalette({ open, onClose }: Props) {
         kind: "command",
         id: "cmd:daily",
         label: "Open today's daily note",
-        hint: "daily",
+        hint: "Command",
+        icon: <Icon name="calendar" size={14} />,
         run: () => openDailyNote(),
       },
     ];
@@ -55,7 +58,8 @@ export default function CommandPalette({ open, onClose }: Props) {
           kind: "note",
           id: h.id,
           label: h.title,
-          hint: "open",
+          hint: "Note",
+          icon: <Icon name="file" size={14} />,
           run: () => setActiveNote(h.id),
         });
       }
@@ -67,7 +71,8 @@ export default function CommandPalette({ open, onClose }: Props) {
           kind: "command",
           id: `create:${q}`,
           label: `Create note "${q}"`,
-          hint: "new",
+          hint: "New",
+          icon: <Icon name="plus" size={14} />,
           run: async () => {
             await createNote({ title: q });
           },
@@ -83,7 +88,8 @@ export default function CommandPalette({ open, onClose }: Props) {
           kind: "note",
           id: n.id,
           label: n.title,
-          hint: "recent",
+          hint: "Recent",
+          icon: <Icon name="file" size={14} />,
           run: () => setActiveNote(n.id),
         });
       }
@@ -106,57 +112,111 @@ export default function CommandPalette({ open, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 pt-24"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-24"
+      style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(2px)" }}
       onMouseDown={onClose}
     >
       <div
-        className="w-[520px] rounded-lg border border-neutral-200 bg-white shadow-xl dark:border-neutral-700 dark:bg-neutral-900"
+        className="w-[560px] max-w-[92vw] overflow-hidden"
+        style={{
+          background: "var(--vf-surface)",
+          border: "1px solid var(--vf-border)",
+          borderRadius: "var(--vf-radius-lg)",
+          boxShadow: "var(--vf-shadow-lg)",
+        }}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <input
-          ref={inputRef}
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setIndex(0);
-          }}
-          onKeyDown={async (e) => {
-            if (e.key === "Escape") {
-              onClose();
-            } else if (e.key === "ArrowDown") {
-              e.preventDefault();
-              setIndex((i) => Math.min(items.length - 1, i + 1));
-            } else if (e.key === "ArrowUp") {
-              e.preventDefault();
-              setIndex((i) => Math.max(0, i - 1));
-            } else if (e.key === "Enter") {
-              e.preventDefault();
-              await pick(index);
-            }
-          }}
-          placeholder="Search notes or type to create…"
-          className="w-full rounded-t-lg bg-transparent px-4 py-3 text-sm outline-none"
-        />
-        <div className="max-h-80 overflow-y-auto border-t border-neutral-200 dark:border-neutral-700">
+        <div
+          className="flex items-center gap-2 px-3"
+          style={{ height: 44, borderBottom: "1px solid var(--vf-border)" }}
+        >
+          <span style={{ color: "var(--vf-muted)" }}>
+            <Icon name="search" size={15} />
+          </span>
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setIndex(0);
+            }}
+            onKeyDown={async (e) => {
+              if (e.key === "Escape") onClose();
+              else if (e.key === "ArrowDown") {
+                e.preventDefault();
+                setIndex((i) => Math.min(items.length - 1, i + 1));
+              } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                setIndex((i) => Math.max(0, i - 1));
+              } else if (e.key === "Enter") {
+                e.preventDefault();
+                await pick(index);
+              }
+            }}
+            placeholder="Search notes or type to create…"
+            className="w-full bg-transparent text-[14px] outline-none"
+            style={{ color: "var(--vf-fg)" }}
+          />
+          <span className="vf-kbd">Esc</span>
+        </div>
+        <div className="max-h-[360px] overflow-y-auto p-1">
           {items.length === 0 ? (
-            <div className="px-4 py-3 text-sm opacity-60">No results.</div>
+            <div
+              className="px-4 py-6 text-center text-[13px]"
+              style={{ color: "var(--vf-subtle)" }}
+            >
+              No results.
+            </div>
           ) : (
-            items.map((it, i) => (
-              <button
-                key={it.id}
-                onClick={() => void pick(i)}
-                onMouseMove={() => setIndex(i)}
-                className={`flex w-full items-center justify-between px-4 py-2 text-left text-sm ${
-                  i === index
-                    ? "bg-blue-100 dark:bg-blue-900/40"
-                    : "hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                }`}
-              >
-                <span className="truncate">{it.label}</span>
-                <span className="text-xs opacity-50">{it.hint}</span>
-              </button>
-            ))
+            items.map((it, i) => {
+              const active = i === index;
+              return (
+                <button
+                  key={it.id}
+                  onClick={() => void pick(i)}
+                  onMouseMove={() => setIndex(i)}
+                  className="flex w-full items-center gap-2 rounded px-3 text-left text-[13px]"
+                  style={{
+                    height: 34,
+                    background: active ? "var(--vf-accent-soft)" : "transparent",
+                    color: "var(--vf-fg)",
+                    transition: "background-color 120ms ease",
+                  }}
+                >
+                  <span
+                    style={{
+                      color: active ? "var(--vf-accent)" : "var(--vf-muted)",
+                    }}
+                  >
+                    {it.icon}
+                  </span>
+                  <span className="flex-1 truncate">{it.label}</span>
+                  <span
+                    className="text-[11px]"
+                    style={{ color: "var(--vf-subtle)" }}
+                  >
+                    {it.hint}
+                  </span>
+                </button>
+              );
+            })
           )}
+        </div>
+        <div
+          className="flex items-center justify-between px-3 text-[11px]"
+          style={{
+            height: 32,
+            color: "var(--vf-subtle)",
+            borderTop: "1px solid var(--vf-border)",
+            background: "var(--vf-bg)",
+          }}
+        >
+          <span>
+            <span className="vf-kbd">↑</span> <span className="vf-kbd">↓</span> navigate
+          </span>
+          <span>
+            <span className="vf-kbd">Enter</span> open
+          </span>
         </div>
       </div>
     </div>

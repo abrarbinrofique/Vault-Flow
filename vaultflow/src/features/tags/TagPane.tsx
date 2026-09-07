@@ -18,15 +18,19 @@ export default function TagPane() {
   if (entries.length === 0) return null;
 
   return (
-    <div className="border-b border-neutral-200 px-3 py-2 dark:border-neutral-800">
-      <div className="mb-1 flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wide opacity-70">
+    <div
+      className="border-b px-3 pt-3 pb-2"
+      style={{ borderColor: "var(--vf-border)" }}
+    >
+      <div className="mb-2 flex items-center justify-between" style={{ color: "var(--vf-muted)" }}>
+        <span className="text-[10.5px] font-semibold uppercase tracking-wider">
           Tags
         </span>
         {tagFilter && (
           <button
             onClick={() => setTagFilter(null)}
-            className="text-xs opacity-70 hover:opacity-100"
+            className="text-[11px]"
+            style={{ color: "var(--vf-accent)" }}
           >
             clear
           </button>
@@ -39,13 +43,21 @@ export default function TagPane() {
             <button
               key={tag}
               onClick={() => setTagFilter(active ? null : tag)}
-              className={`rounded px-1.5 py-0.5 text-xs ${
-                active
-                  ? "bg-blue-600 text-white"
-                  : "bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
-              }`}
+              className="inline-flex items-center gap-1 rounded px-2 text-[11.5px]"
+              style={{
+                height: 22,
+                background: active
+                  ? "var(--vf-accent)"
+                  : "var(--vf-surface-hover)",
+                color: active ? "var(--vf-on-accent)" : "var(--vf-fg-secondary)",
+                border: "1px solid",
+                borderColor: active ? "transparent" : "var(--vf-border)",
+                transition:
+                  "background-color 140ms ease, color 140ms ease, border-color 140ms ease",
+              }}
             >
-              #{tag} <span className="opacity-60">{count}</span>
+              <span>#{tag}</span>
+              <span style={{ opacity: 0.55 }}>{count}</span>
             </button>
           );
         })}

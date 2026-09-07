@@ -67,14 +67,24 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
   }, [notes, outbound]);
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-white dark:bg-neutral-950">
-      <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-2 dark:border-neutral-800">
-        <span className="text-sm font-semibold">Graph</span>
+    <div
+      className="fixed inset-0 z-40 flex flex-col"
+      style={{ background: "var(--vf-bg)", color: "var(--vf-fg)" }}
+    >
+      <div
+        className="flex items-center justify-between border-b px-4"
+        style={{ height: 44, borderColor: "var(--vf-border)" }}
+      >
+        <span className="text-[13px] font-semibold tracking-tight">Graph</span>
         <button
           onClick={onClose}
-          className="text-xs opacity-70 hover:opacity-100"
+          className="vf-icon-btn"
+          aria-label="Close graph"
+          title="Close"
         >
-          Close ✕
+          <span style={{ display: "inline-flex" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </span>
         </button>
       </div>
       <div ref={containerRef} className="flex-1 overflow-hidden">

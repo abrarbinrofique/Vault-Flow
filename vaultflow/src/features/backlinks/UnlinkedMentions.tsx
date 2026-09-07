@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import Icon from "../../components/Icon";
 import { useVaultStore } from "../../stores/useVaultStore";
 import { parseWikilinks } from "../../lib/markdown";
 
@@ -24,7 +25,6 @@ function findUnlinkedMentions(
     const content = n.content;
     if (!content.toLowerCase().includes(target)) continue;
 
-    // Skip if this note's linked wikilinks already include the title (i.e., it's a real backlink).
     const linked = parseWikilinks(content).some(
       (l) => l.title.toLowerCase() === target,
     );
@@ -32,12 +32,8 @@ function findUnlinkedMentions(
     wordRe.lastIndex = 0;
     const m = wordRe.exec(content);
     if (!m) continue;
-    // If the match sits inside a wikilink, don't call it unlinked. Cheap check:
-    // scan backwards for "[[" before the match and forward for "]]" before another "[[".
     const before = content.slice(Math.max(0, m.index - 4), m.index);
-    if (before.endsWith("[[")) {
-      if (linked) continue;
-    }
+    if (before.endsWith("[[") && linked) continue;
 
     const start = Math.max(0, m.index - 30);
     const end = Math.min(content.length, m.index + m[0].length + 40);
@@ -68,21 +64,43 @@ export default function UnlinkedMentions({ noteId }: Props) {
 
   return (
     <div
-      className="border-t px-4 py-2 text-xs"
-      style={{ borderColor: "var(--vf-border)", background: "var(--vf-panel)" }}
+      className="border-t px-5 py-3"
+      style={{
+        borderColor: "var(--vf-border)",
+        background: "var(--vf-surface)",
+      }}
     >
-      <div className="mb-1 font-semibold uppercase tracking-wide opacity-70">
-        Unlinked mentions ({mentions.length})
+      <div
+        className="mb-2 flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-wider"
+        style={{ color: "var(--vf-muted)" }}
+      >
+        <Icon name="dot" size={12} />
+        Unlinked mentions
+        <span style={{ color: "var(--vf-subtle)" }}>({mentions.length})</span>
       </div>
       <ul className="space-y-1">
         {mentions.map((m) => (
           <li key={m.id}>
             <button
               onClick={() => setActiveNote(m.id)}
-              className="text-left hover:opacity-80"
+              className="flex w-full flex-col items-start gap-0.5 rounded px-1.5 py-1 text-left"
+              onMouseOver={(e) =>
+                (e.currentTarget.style.background = "var(--vf-surface-hover)")
+              }
+              onMouseOut={(e) => (e.currentTarget.style.background = "transparent")}
             >
-              <span className="underline decoration-dotted">{m.title}</span>
-              <span className="ml-2 opacity-60">{m.snippet}</span>
+              <span
+                className="text-[12.5px] font-medium"
+                style={{ color: "var(--vf-fg-secondary)" }}
+              >
+                {m.title}
+              </span>
+              <span
+                className="line-clamp-2 text-[11.5px]"
+                style={{ color: "var(--vf-subtle)" }}
+              >
+                {m.snippet}
+              </span>
             </button>
           </li>
         ))}

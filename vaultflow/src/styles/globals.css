@@ -263,10 +263,28 @@ button {
   font-size: 16px;
   font-weight: 600;
 }
+.cm-editor .cm-md-heading-5 {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--vf-fg-secondary);
+}
+.cm-editor .cm-md-heading-6 {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--vf-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
 .cm-editor .cm-md-h1 { font-size: 28px; font-weight: 700; }
 .cm-editor .cm-md-h2 { font-size: 22px; font-weight: 700; }
 .cm-editor .cm-md-h3 { font-size: 18px; font-weight: 600; }
 .cm-editor .cm-md-h4 { font-size: 16px; font-weight: 600; }
+
+/* Dimmed syntax on the active line (Live-Preview affordance) */
+.cm-editor .cm-md-syntax {
+  color: var(--vf-subtle);
+  opacity: 0.6;
+}
 
 /* Inline emphasis */
 .cm-editor .cm-md-strong { font-weight: 700; color: var(--vf-fg); }

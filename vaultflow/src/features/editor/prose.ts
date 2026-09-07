@@ -1,12 +1,17 @@
 /**
- * Markdown "live styling" extensions: heading sizes, bold/italic, blockquote,
- * inline code, code blocks, and a decoration for #tag chips.
+ * Live markdown decorations — no text mutation, viewport-scoped, syntax-tree
+ * driven. Behaviour follows Obsidian's Live Preview:
+ *   - Lines the cursor is NOT on: syntax characters are hidden.
+ *   - Line the cursor IS on: syntax characters remain but are dimmed.
+ * Raw markdown remains the source of truth for save / index / search.
  *
- * All CSS lives in globals.css so tokens (accent, muted, surface) can theme it.
- * These extensions add class names, they don't recreate the EditorView.
+ * Incremental buildout:
+ *   1. Headings — hide `#` markers off active line, dim on active line.
+ *   (blockquote / code block / tag chip line styling is kept from the earlier
+ *   polish pass; syntax hiding for those will be added in later increments.)
  */
 
-import { RangeSetBuilder, type Extension } from "@codemirror/state";
+import { type Extension, type Range, RangeSet } from "@codemirror/state";
 import {
   Decoration,
   type DecorationSet,
@@ -14,11 +19,10 @@ import {
   ViewPlugin,
   type ViewUpdate,
 } from "@codemirror/view";
-import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { HighlightStyle, syntaxHighlighting, syntaxTree } from "@codemirror/language";
 import { tags as t } from "@lezer/highlight";
-import { syntaxTree } from "@codemirror/language";
 
-// -- syntax-based highlighting for markdown ---------------------------------
+// -- syntax-based highlighting ---------------------------------------------
 
 const mdHighlight = HighlightStyle.define([
   { tag: t.heading1, class: "cm-md-h1" },
@@ -36,118 +40,136 @@ const mdHighlight = HighlightStyle.define([
   { tag: t.meta, class: "cm-md-meta" },
 ]);
 
-// -- block-level decorations (code blocks get mono font; blockquotes get bar)
+// -- helpers ---------------------------------------------------------------
 
-function buildBlockDecorations(view: EditorView): DecorationSet {
-  const builder = new RangeSetBuilder<Decoration>();
+function activeLineSet(view: EditorView): Set<number> {
+  const s = new Set<number>();
+  for (const r of view.state.selection.ranges) {
+    s.add(view.state.doc.lineAt(r.head).number);
+    if (!r.empty) s.add(view.state.doc.lineAt(r.anchor).number);
+  }
+  return s;
+}
+
+const HIDE = Decoration.replace({});
+const DIM = Decoration.mark({ class: "cm-md-syntax" });
+const TAG_MARK = Decoration.mark({ class: "cm-md-tag" });
+
+const TAG_RE = /(^|\s)(#[\w/-]+)/g;
+
+// -- main decoration builder -----------------------------------------------
+
+function buildDecorations(view: EditorView): DecorationSet {
+  const decos: Range<Decoration>[] = [];
   const tree = syntaxTree(view.state);
+  const activeLines = activeLineSet(view);
+
   for (const { from, to } of view.visibleRanges) {
+    // ---- syntax-tree passes ----
     tree.iterate({
       from,
       to,
       enter(node) {
         const name = node.name;
-        if (name === "FencedCode" || name === "CodeBlock") {
-          // Add line class to each line in the code block so CSS can apply mono font.
-          const startLine = view.state.doc.lineAt(node.from).number;
-          const endLine = view.state.doc.lineAt(node.to).number;
-          for (let n = startLine; n <= endLine; n++) {
-            const line = view.state.doc.line(n);
-            builder.add(
-              line.from,
-              line.from,
-              Decoration.line({ class: "cm-md-codeblock" }),
-            );
-          }
-        } else if (name === "Blockquote") {
-          const startLine = view.state.doc.lineAt(node.from).number;
-          const endLine = view.state.doc.lineAt(node.to).number;
-          for (let n = startLine; n <= endLine; n++) {
-            const line = view.state.doc.line(n);
-            builder.add(
-              line.from,
-              line.from,
-              Decoration.line({ class: "cm-md-blockquote" }),
-            );
-          }
-        } else if (
+
+        // Headings
+        if (
           name === "ATXHeading1" ||
           name === "ATXHeading2" ||
           name === "ATXHeading3" ||
-          name === "ATXHeading4"
+          name === "ATXHeading4" ||
+          name === "ATXHeading5" ||
+          name === "ATXHeading6"
         ) {
           const level = name.slice(-1);
           const line = view.state.doc.lineAt(node.from);
-          builder.add(
-            line.from,
-            line.from,
-            Decoration.line({ class: `cm-md-heading cm-md-heading-${level}` }),
+          decos.push(
+            Decoration.line({
+              class: `cm-md-heading cm-md-heading-${level}`,
+            }).range(line.from),
           );
+
+          const mark = node.node.getChild("HeaderMark");
+          if (mark) {
+            const followsSpace =
+              view.state.sliceDoc(mark.to, mark.to + 1) === " ";
+            const rangeEnd = mark.to + (followsSpace ? 1 : 0);
+            if (activeLines.has(line.number)) {
+              decos.push(DIM.range(mark.from, rangeEnd));
+            } else {
+              decos.push(HIDE.range(mark.from, rangeEnd));
+            }
+          }
+          return;
+        }
+
+        // Fenced code blocks: mono line + surface bar
+        if (name === "FencedCode" || name === "CodeBlock") {
+          const startLine = view.state.doc.lineAt(node.from).number;
+          const endLine = view.state.doc.lineAt(node.to).number;
+          for (let n = startLine; n <= endLine; n++) {
+            const line = view.state.doc.line(n);
+            decos.push(
+              Decoration.line({ class: "cm-md-codeblock" }).range(line.from),
+            );
+          }
+          return;
+        }
+
+        // Blockquotes: left border
+        if (name === "Blockquote") {
+          const startLine = view.state.doc.lineAt(node.from).number;
+          const endLine = view.state.doc.lineAt(node.to).number;
+          for (let n = startLine; n <= endLine; n++) {
+            const line = view.state.doc.line(n);
+            decos.push(
+              Decoration.line({ class: "cm-md-blockquote" }).range(line.from),
+            );
+          }
+          return;
         }
       },
     });
-  }
-  return builder.finish();
-}
 
-function blockDecorations(): Extension {
-  return ViewPlugin.fromClass(
-    class {
-      decorations: DecorationSet;
-      constructor(view: EditorView) {
-        this.decorations = buildBlockDecorations(view);
-      }
-      update(update: ViewUpdate) {
-        if (update.docChanged || update.viewportChanged) {
-          this.decorations = buildBlockDecorations(update.view);
-        }
-      }
-    },
-    { decorations: (v) => v.decorations },
-  );
-}
-
-// -- #tag inline decoration -------------------------------------------------
-
-const TAG_RE = /(^|\s)(#[\w/-]+)/g;
-
-function buildTagDecorations(view: EditorView): DecorationSet {
-  const builder = new RangeSetBuilder<Decoration>();
-  const mark = Decoration.mark({ class: "cm-md-tag" });
-  for (const { from, to } of view.visibleRanges) {
-    const text = view.state.doc.sliceString(from, to);
+    // ---- inline #tag pill chips (regex over visible slice) ----
+    const text = view.state.sliceDoc(from, to);
     TAG_RE.lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = TAG_RE.exec(text)) !== null) {
       const tagStart = from + m.index + m[1].length;
       const tagEnd = tagStart + m[2].length;
-      builder.add(tagStart, tagEnd, mark);
+      decos.push(TAG_MARK.range(tagStart, tagEnd));
     }
   }
-  return builder.finish();
+
+  return RangeSet.of(decos, true);
 }
 
-function tagDecorations(): Extension {
-  return ViewPlugin.fromClass(
-    class {
-      decorations: DecorationSet;
-      constructor(view: EditorView) {
-        this.decorations = buildTagDecorations(view);
+const proseDecorationsPlugin = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = buildDecorations(view);
+    }
+    update(update: ViewUpdate) {
+      if (
+        update.docChanged ||
+        update.viewportChanged ||
+        update.selectionSet
+      ) {
+        this.decorations = buildDecorations(update.view);
       }
-      update(update: ViewUpdate) {
-        if (update.docChanged || update.viewportChanged) {
-          this.decorations = buildTagDecorations(update.view);
-        }
-      }
-    },
-    { decorations: (v) => v.decorations },
-  );
-}
+    }
+  },
+  {
+    decorations: (v) => v.decorations,
+    provide: (plugin) =>
+      EditorView.atomicRanges.of((view) => {
+        return view.plugin(plugin)?.decorations ?? Decoration.none;
+      }),
+  },
+);
 
 export function proseStyling(): Extension {
-  return [
-    syntaxHighlighting(mdHighlight),
-    blockDecorations(),
-    tagDecorations(),
-  ];
+  return [syntaxHighlighting(mdHighlight), proseDecorationsPlugin];
 }

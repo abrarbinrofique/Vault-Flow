@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import FileTree from "./features/filetree/FileTree";
-import Editor from "./features/editor/Editor";
-import BacklinksPanel from "./features/backlinks/BacklinksPanel";
+import NotePane from "./features/editor/NotePane";
 import TagPane from "./features/tags/TagPane";
 import CommandPalette from "./features/commandpalette/CommandPalette";
 import GraphView from "./features/graph/GraphView";
@@ -11,12 +10,13 @@ import { useUiStore } from "./stores/useUiStore";
 export default function App() {
   const loadAll = useVaultStore((s) => s.loadAll);
   const loaded = useVaultStore((s) => s.loaded);
-  const activeNote = useVaultStore((s) =>
-    s.activeNoteId ? s.notes[s.activeNoteId] : null,
-  );
+  const activeNoteId = useVaultStore((s) => s.activeNoteId);
   const loadTheme = useUiStore((s) => s.loadTheme);
   const theme = useUiStore((s) => s.theme);
   const toggleTheme = useUiStore((s) => s.toggleTheme);
+  const splitNoteId = useUiStore((s) => s.splitNoteId);
+  const openSplit = useUiStore((s) => s.openSplit);
+  const closeSplit = useUiStore((s) => s.closeSplit);
 
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [graphOpen, setGraphOpen] = useState(false);
@@ -38,9 +38,18 @@ export default function App() {
   }, []);
 
   return (
-    <div className="flex h-screen bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
-      <aside className="flex w-64 flex-col border-r border-neutral-200 dark:border-neutral-800">
-        <div className="flex items-center justify-between border-b border-neutral-200 px-3 py-2 dark:border-neutral-800">
+    <div
+      className="flex h-screen"
+      style={{ background: "var(--vf-bg)", color: "var(--vf-fg)" }}
+    >
+      <aside
+        className="flex w-64 flex-col border-r"
+        style={{ borderColor: "var(--vf-border)" }}
+      >
+        <div
+          className="flex items-center justify-between border-b px-3 py-2"
+          style={{ borderColor: "var(--vf-border)" }}
+        >
           <span className="text-sm font-semibold">VaultFlow</span>
           <div className="flex gap-2">
             <button
@@ -68,20 +77,46 @@ export default function App() {
           <div className="p-3 text-xs opacity-70">Loading…</div>
         )}
       </aside>
-      <main className="flex-1 overflow-hidden">
-        {activeNote ? (
-          <div className="flex h-full flex-col">
-            <div className="border-b border-neutral-200 px-4 py-2 text-sm dark:border-neutral-800">
-              {activeNote.title}
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <Editor noteId={activeNote.id} initialContent={activeNote.content} />
-            </div>
-            <BacklinksPanel />
+      <main className="flex flex-1 overflow-hidden">
+        {activeNoteId ? (
+          <div
+            className={splitNoteId ? "flex-1 border-r" : "flex-1"}
+            style={{ borderColor: "var(--vf-border)" }}
+          >
+            <NotePane
+              noteId={activeNoteId}
+              right={
+                !splitNoteId && (
+                  <button
+                    onClick={() => openSplit(activeNoteId)}
+                    className="text-xs opacity-70 hover:opacity-100"
+                    title="Split right"
+                  >
+                    ⇹
+                  </button>
+                )
+              }
+            />
           </div>
         ) : (
-          <div className="flex h-full items-center justify-center text-sm opacity-60">
+          <div className="flex flex-1 items-center justify-center text-sm opacity-60">
             Select or create a note.
+          </div>
+        )}
+        {splitNoteId && (
+          <div className="flex-1">
+            <NotePane
+              noteId={splitNoteId}
+              right={
+                <button
+                  onClick={closeSplit}
+                  className="text-xs opacity-70 hover:opacity-100"
+                  title="Close split"
+                >
+                  ✕
+                </button>
+              }
+            />
           </div>
         )}
       </main>

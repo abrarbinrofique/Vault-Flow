@@ -10,6 +10,7 @@ import {
 } from "../templates/newFromTemplate";
 import { useSmartStore } from "../../stores/useSmartStore";
 import { insertTableAtCursor } from "../editor/insertTable";
+import { importLibraryFromPicker } from "../drawing/importLibrary";
 
 interface HighlightedSnippet {
   before: string;
@@ -86,6 +87,25 @@ export default function CommandPalette({ open, onClose }: Props) {
         hint: "Command",
         icon: <Icon name="calendar" size={14} />,
         run: () => openDailyNote(),
+      },
+      {
+        kind: "command",
+        id: "cmd:import-excalidraw-lib",
+        label: "Import shape library (.excalidrawlib)",
+        hint: "Drawing",
+        icon: <Icon name="pen" size={14} />,
+        run: async () => {
+          try {
+            const r = await importLibraryFromPicker();
+            if (r) {
+              window.alert(
+                `Imported ${r.imported} shape${r.imported === 1 ? "" : "s"}. Library now has ${r.totalAfter}.`,
+              );
+            }
+          } catch (e) {
+            window.alert(`Library import failed: ${(e as Error).message}`);
+          }
+        },
       },
       {
         kind: "command",

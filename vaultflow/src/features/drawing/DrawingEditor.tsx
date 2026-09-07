@@ -1,6 +1,11 @@
-import { lazy, Suspense, useEffect, useMemo, useRef } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { debounce } from "../../lib/debounce";
 import { useVaultStore } from "../../stores/useVaultStore";
+import { loadLibrary, saveLibrary, type LibraryItem } from "./library";
+import {
+  registerExcalidrawApi,
+  unregisterExcalidrawApi,
+} from "./excalidrawApiRegistry";
 
 // Lazy-loaded: Excalidraw is ~2MB, only enters the bundle when a drawing note is opened.
 const Excalidraw = lazy(async () => {
@@ -43,6 +48,32 @@ export default function DrawingEditor({
     noteIdRef.current = noteId;
   }, [noteId]);
 
+  const [libraryItems, setLibraryItems] = useState<LibraryItem[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadLibrary().then((items) => {
+      if (!cancelled) setLibraryItems(items);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const persistLibrary = useMemo(
+    () =>
+      debounce((items: LibraryItem[]) => {
+        void saveLibrary(items);
+      }, 500),
+    [],
+  );
+  useEffect(
+    () => () => {
+      persistLibrary.flush();
+    },
+    [persistLibrary],
+  );
+
   const initialData = useMemo(() => {
     const scene = parseScene(initialContent);
     // Excalidraw's InitialData typings are strict; our scene comes from JSON so
@@ -55,12 +86,13 @@ export default function DrawingEditor({
           (theme === "dark" ? "#101115" : "#ffffff"),
       },
       files: scene.files ?? {},
+      libraryItems: libraryItems ?? [],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
     // Only reparse when the note itself changes; we don't want to snap the
     // canvas back to disk on every keystroke.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [noteId]);
+  }, [noteId, libraryItems !== null]);
 
   const persist = useMemo(
     () =>
@@ -76,6 +108,28 @@ export default function DrawingEditor({
     },
     [persist],
   );
+
+  // Unregister the api on unmount — Excalidraw invokes excalidrawAPI callback
+  // once with the api; we don't get an explicit "goodbye", so clear on cleanup.
+  const registeredApi = useRef<unknown | null>(null);
+  useEffect(
+    () => () => {
+      if (registeredApi.current) unregisterExcalidrawApi(registeredApi.current);
+    },
+    [],
+  );
+
+  // Wait for the library load so initialData carries it on first paint.
+  if (libraryItems === null) {
+    return (
+      <div
+        className="flex h-full items-center justify-center text-sm"
+        style={{ color: "var(--vf-muted)" }}
+      >
+        Loading canvas…
+      </div>
+    );
+  }
 
   return (
     <div className="excalidraw-host" style={{ width: "100%", height: "100%" }}>
@@ -95,6 +149,13 @@ export default function DrawingEditor({
           key={noteId}
           initialData={initialData}
           theme={theme}
+          excalidrawAPI={(api: unknown) => {
+            registeredApi.current = api;
+            registerExcalidrawApi(api);
+          }}
+          onLibraryChange={(items: readonly LibraryItem[]) => {
+            persistLibrary([...items]);
+          }}
           onChange={(elements, appState, files) => {
             // Only persist the fields we care about — full appState is volatile UI.
             const scene: StoredScene = {

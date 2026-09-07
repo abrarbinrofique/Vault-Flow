@@ -1,5 +1,5 @@
 import type { StorageAdapter } from "./StorageAdapter";
-import type { Note } from "../types";
+import type { Note, NoteKind } from "../types";
 import { getDb } from "./db";
 
 export class IndexedDbAdapter implements StorageAdapter {
@@ -27,6 +27,7 @@ export class IndexedDbAdapter implements StorageAdapter {
     title: string;
     path?: string;
     content?: string;
+    kind?: NoteKind;
   }): Promise<Note> {
     const now = Date.now();
     const note: Note = {
@@ -36,6 +37,7 @@ export class IndexedDbAdapter implements StorageAdapter {
       content: input.content ?? "",
       createdAt: now,
       updatedAt: now,
+      ...(input.kind ? { kind: input.kind } : {}),
     };
     const db = await getDb();
     await db.put("notes", note);

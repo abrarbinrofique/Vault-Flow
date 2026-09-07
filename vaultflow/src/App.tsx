@@ -7,6 +7,7 @@ import CommandPalette from "./features/commandpalette/CommandPalette";
 import GraphView from "./features/graph/GraphView";
 import EmptyState from "./features/editor/EmptyState";
 import FolderStatus from "./features/folder/FolderStatus";
+import NewNoteMenu from "./features/sidebar/NewNoteMenu";
 import VaultActions from "./features/folder/VaultActions";
 import { QuickCaptureHost } from "./features/capture/QuickCapture";
 import Icon from "./components/Icon";
@@ -168,17 +169,7 @@ export default function App() {
             >
               VaultFlow
             </span>
-            <button
-              className="vf-btn vf-btn-primary"
-              onClick={async () => {
-                const t = window.prompt("New note title");
-                if (t) await useVaultStore.getState().createNote({ title: t });
-              }}
-              style={{ height: 26, padding: "0 8px", fontSize: 12 }}
-            >
-              <Icon name="plus" size={13} />
-              New
-            </button>
+            <NewNoteMenu />
           </div>
           {loaded ? (
             <div className="flex min-h-0 flex-1 flex-col">

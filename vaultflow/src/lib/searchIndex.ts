@@ -23,14 +23,22 @@ export function createSearchIndex(): MiniSearch<Note> {
   });
 }
 
+function forIndex(note: Note): Note {
+  // Drawings store JSON scenes in content — indexing that produces noisy hits.
+  // Index the title only for drawings.
+  if (note.kind === "drawing") return { ...note, content: "" };
+  return note;
+}
+
 export function replaceAll(ms: MiniSearch<Note>, notes: Note[]): void {
   ms.removeAll();
-  ms.addAll(notes);
+  ms.addAll(notes.map(forIndex));
 }
 
 export function upsert(ms: MiniSearch<Note>, note: Note): void {
-  if (ms.has(note.id)) ms.replace(note);
-  else ms.add(note);
+  const indexed = forIndex(note);
+  if (ms.has(indexed.id)) ms.replace(indexed);
+  else ms.add(indexed);
 }
 
 export function remove(ms: MiniSearch<Note>, id: string): void {

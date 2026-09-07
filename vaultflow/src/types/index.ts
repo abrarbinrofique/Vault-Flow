@@ -1,3 +1,5 @@
+export type NoteKind = "markdown" | "drawing";
+
 export interface Note {
   id: string;
   title: string;
@@ -5,6 +7,8 @@ export interface Note {
   content: string;
   createdAt: number;
   updatedAt: number;
+  /** Optional; missing == "markdown" so existing IDB rows migrate implicitly. */
+  kind?: NoteKind;
 }
 
 export interface Folder {

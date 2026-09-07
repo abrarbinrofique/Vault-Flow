@@ -41,7 +41,12 @@ interface VaultState {
   loadAll: () => Promise<void>;
   setActiveNote: (id: string | null) => void;
 
-  createNote: (input: { title: string; path?: string; content?: string }) => Promise<Note>;
+  createNote: (input: {
+    title: string;
+    path?: string;
+    content?: string;
+    kind?: import("../types").NoteKind;
+  }) => Promise<Note>;
   renameNote: (id: string, newTitle: string) => Promise<void>;
   deleteNote: (id: string) => Promise<void>;
   updateNoteContent: (id: string, content: string) => Promise<void>;
@@ -100,8 +105,8 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 
   setActiveNote: (id) => set({ activeNoteId: id }),
 
-  createNote: async ({ title, path, content }) => {
-    const note = await storage.createFile({ title, path: path ?? "", content });
+  createNote: async ({ title, path, content, kind }) => {
+    const note = await storage.createFile({ title, path: path ?? "", content, kind });
     upsertSearch(searchIndex, note);
     mirrorWriteNote(note);
     set((s) => ({

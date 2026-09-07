@@ -1,4 +1,4 @@
-import type { Note } from "../types";
+import type { Note, NoteKind } from "../types";
 
 export interface StorageAdapter {
   listFiles(): Promise<Note[]>;
@@ -9,5 +9,6 @@ export interface StorageAdapter {
     title: string;
     path?: string;
     content?: string;
+    kind?: NoteKind;
   }): Promise<Note>;
 }

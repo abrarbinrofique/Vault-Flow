@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import Editor from "./Editor";
 import TableToolbar from "./TableToolbar";
 import { allEditors } from "./focusedEditor";
+import DrawingEditor from "../drawing/DrawingEditor";
+import { useUiStore } from "../../stores/useUiStore";
 import BacklinksPanel from "../backlinks/BacklinksPanel";
 import UnlinkedMentions from "../backlinks/UnlinkedMentions";
 import Icon from "../../components/Icon";
@@ -14,6 +16,17 @@ interface Props {
   noteId: string;
   showBacklinks?: boolean;
   actions?: React.ReactNode;
+}
+
+function DrawingHost({ note }: { note: Note }) {
+  const theme = useUiStore((s) => s.theme);
+  return (
+    <DrawingEditor
+      noteId={note.id}
+      initialContent={note.content}
+      theme={theme}
+    />
+  );
 }
 
 function TableToolbarHost() {
@@ -227,10 +240,16 @@ export default function NotePane({ noteId, showBacklinks = true, actions }: Prop
         </div>
       </div>
       <div className="flex-1 overflow-hidden">
-        <Editor noteId={note.id} initialContent={note.content} />
-        <TableToolbarHost />
+        {note.kind === "drawing" ? (
+          <DrawingHost note={note} />
+        ) : (
+          <>
+            <Editor noteId={note.id} initialContent={note.content} />
+            <TableToolbarHost />
+          </>
+        )}
       </div>
-      {showBacklinks && (
+      {showBacklinks && note.kind !== "drawing" && (
         <>
           <BacklinksPanel noteId={note.id} />
           <UnlinkedMentions noteId={note.id} />

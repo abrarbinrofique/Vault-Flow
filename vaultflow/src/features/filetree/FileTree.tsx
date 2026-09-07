@@ -277,7 +277,7 @@ function NoteRow({ note, depth }: { note: Note; depth: number }) {
           display: "inline-flex",
         }}
       >
-        <Icon name="file" size={14} />
+        <Icon name={note.kind === "drawing" ? "pen" : "file"} size={14} />
       </span>
       <span className="truncate">{note.title}</span>
     </RowShell>

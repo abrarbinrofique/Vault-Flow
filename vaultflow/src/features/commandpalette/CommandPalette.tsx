@@ -89,6 +89,20 @@ export default function CommandPalette({ open, onClose }: Props) {
       },
       {
         kind: "command",
+        id: "cmd:new-drawing",
+        label: "New drawing",
+        hint: "Command",
+        icon: <Icon name="pen" size={14} />,
+        run: async () => {
+          const t = window.prompt("New drawing title");
+          if (!t) return;
+          await useVaultStore
+            .getState()
+            .createNote({ title: t, kind: "drawing" });
+        },
+      },
+      {
+        kind: "command",
         id: "cmd:insert-table",
         label: "Insert table",
         hint: "Command",

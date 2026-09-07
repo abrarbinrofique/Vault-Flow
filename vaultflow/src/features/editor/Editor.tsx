@@ -7,12 +7,14 @@ import { completionKeymap } from "@codemirror/autocomplete";
 import { useVaultStore } from "../../stores/useVaultStore";
 import { debounce } from "../../lib/debounce";
 import { wikilinkAutocomplete } from "./wikilinkComplete";
+import { wikilinkClick } from "./wikilinkClick";
 
 const baseExtensions = [
   history(),
   keymap.of([...defaultKeymap, ...historyKeymap, ...completionKeymap]),
   markdown(),
   wikilinkAutocomplete(),
+  wikilinkClick(),
   EditorView.lineWrapping,
   lineNumbers(),
   EditorView.theme({

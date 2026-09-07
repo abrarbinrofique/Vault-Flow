@@ -4,11 +4,47 @@ import { useVaultStore } from "../../stores/useVaultStore";
 import { useUiStore } from "../../stores/useUiStore";
 import Icon from "../../components/Icon";
 
+// Muted palette that reads on both themes; deterministic per folder.
+const PALETTE = [
+  "#9d8bd0", // violet
+  "#6fb8ae", // teal
+  "#d9a24a", // amber
+  "#cf7d97", // rose
+  "#7ba6d2", // sky
+  "#a8c76b", // lime
+  "#d68a52", // orange
+  "#8a92c9", // indigo
+  "#c78bb0", // orchid
+  "#7fb59c", // sage
+];
+
+const DAILY_HUE = "#5eb0b7"; // fixed teal, regardless of folder
+const ROOT_HUE_LIGHT = "#94a3b8"; // slate-400
+const ROOT_HUE_DARK = "#7d8695";
+const ACTIVE_HUE_FALLBACK = "#8b7cff";
+
+function hashIndex(s: string, mod: number): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = (h * 16777619) >>> 0;
+  }
+  return h % mod;
+}
+
+function topFolder(path: string): string {
+  if (!path) return "";
+  const i = path.indexOf("/");
+  return i === -1 ? path : path.slice(0, i);
+}
+
 interface GNode {
   id: string;
   name: string;
   degree: number;
   kind: "note" | "daily";
+  group: string; // top-level folder, "" for root
+  color: string;
   x?: number;
   y?: number;
   vx?: number;
@@ -29,6 +65,15 @@ function readCssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
+// Hex → rgba
+function withAlpha(hex: string, a: number): string {
+  const c = hex.replace("#", "");
+  const r = parseInt(c.slice(0, 2), 16);
+  const g = parseInt(c.slice(2, 4), 16);
+  const b = parseInt(c.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
 export default function GraphView({ onClose }: { onClose: () => void }) {
   const notes = useVaultStore((s) => s.notes);
   const outbound = useVaultStore((s) => s.linkIndex.outbound);
@@ -40,28 +85,18 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [hoverId, setHoverId] = useState<string | null>(null);
 
-  const palette = useMemo(() => {
-    // Reread on theme change.
+  const chrome = useMemo(() => {
     return {
-      bg: readCssVar("--vf-bg") || (theme === "dark" ? "#101115" : "#ffffff"),
-      surface: readCssVar("--vf-surface"),
       dot:
         theme === "dark"
           ? "rgba(255,255,255,0.035)"
           : "rgba(0,0,0,0.05)",
-      neutral: theme === "dark" ? "#5a6472" : "#9aa3ae",
-      neutralStroke: theme === "dark" ? "#232830" : "#e2e5ea",
-      accent: readCssVar("--vf-accent") || "#8b7cff",
-      accentSoft:
-        theme === "dark"
-          ? "rgba(139,124,255,0.35)"
-          : "rgba(109,92,245,0.35)",
-      secondary: theme === "dark" ? "#5eb0b7" : "#2b8a8f", // daily notes
+      accent: readCssVar("--vf-accent") || ACTIVE_HUE_FALLBACK,
       label: theme === "dark" ? "#e5e7eb" : "#111827",
-      labelDim: theme === "dark" ? "#4b525c" : "#c2c6cd",
+      labelDim: theme === "dark" ? "#7a8492" : "#95a0af",
       linkColor:
-        theme === "dark" ? "rgba(200,200,200,0.18)" : "rgba(60,60,60,0.18)",
-      linkHighlight: readCssVar("--vf-accent") || "#8b7cff",
+        theme === "dark" ? "rgba(200,200,200,0.14)" : "rgba(60,60,60,0.14)",
+      rootHue: theme === "dark" ? ROOT_HUE_DARK : ROOT_HUE_LIGHT,
     };
   }, [theme]);
 
@@ -75,6 +110,22 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
     setSize({ w: el.clientWidth, h: el.clientHeight });
     return () => ro.disconnect();
   }, []);
+
+  // Deterministic folder → color mapping. Assign palette slots in order of
+  // discovery so the top-N legend is stable-ish across reloads.
+  const folderColor = useMemo(() => {
+    const m = new Map<string, string>();
+    const distinctFolders = new Set<string>();
+    for (const n of Object.values(notes)) {
+      const f = topFolder(n.path);
+      if (f && f !== "Daily") distinctFolders.add(f);
+    }
+    // Sort alphabetically for stability regardless of iteration order.
+    for (const f of [...distinctFolders].sort()) {
+      m.set(f, PALETTE[hashIndex(f, PALETTE.length)]);
+    }
+    return m;
+  }, [notes]);
 
   const data = useMemo(() => {
     const titleToId = new Map<string, string>();
@@ -93,16 +144,25 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
       }
     }
 
-    const nodes: GNode[] = Object.values(notes).map((n) => ({
-      id: n.id,
-      name: n.title,
-      degree: degree.get(n.id) ?? 0,
-      kind: n.path === "Daily" ? "daily" : "note",
-    }));
+    const nodes: GNode[] = Object.values(notes).map((n) => {
+      const group = topFolder(n.path);
+      const kind: "note" | "daily" = group === "Daily" ? "daily" : "note";
+      let color: string;
+      if (kind === "daily") color = DAILY_HUE;
+      else if (!group) color = chrome.rootHue;
+      else color = folderColor.get(group) ?? chrome.rootHue;
+      return {
+        id: n.id,
+        name: n.title,
+        degree: degree.get(n.id) ?? 0,
+        kind,
+        group,
+        color,
+      };
+    });
     return { nodes, links };
-  }, [notes, outbound]);
+  }, [notes, outbound, folderColor, chrome.rootHue]);
 
-  // Compute neighbor sets for hover dimming.
   const neighborsById = useMemo(() => {
     const m = new Map<string, Set<string>>();
     for (const n of data.nodes) m.set(n.id, new Set());
@@ -115,40 +175,32 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
     return m;
   }, [data]);
 
-  // Zoom to fit on mount and when data first arrives.
   useEffect(() => {
     if (!fgRef.current || data.nodes.length === 0) return;
     const t = setTimeout(() => fgRef.current?.zoomToFit(600, 80), 350);
     return () => clearTimeout(t);
   }, [data.nodes.length]);
 
-  const radiusFor = (deg: number) => 3.5 + Math.min(6, Math.sqrt(deg) * 1.6);
+  const radiusFor = (deg: number, active: boolean) =>
+    (active ? 5 : 3.5) + Math.min(6, Math.sqrt(deg) * 1.6);
 
-  const colorFor = (n: GNode): { fill: string; stroke: string; label: string } => {
-    const isActive = n.id === activeNoteId;
-    const isHover = n.id === hoverId;
-    const isNeighbor =
-      hoverId && (hoverId === n.id || neighborsById.get(hoverId)?.has(n.id));
-
-    if (hoverId && !isNeighbor && !isActive) {
-      return {
-        fill: palette.neutralStroke,
-        stroke: palette.neutralStroke,
-        label: palette.labelDim,
-      };
+  // Legend groups: top-level folders by size + Daily + Root + Active.
+  const legend = useMemo(() => {
+    const counts = new Map<string, number>();
+    let root = 0;
+    let daily = 0;
+    for (const n of data.nodes) {
+      if (n.kind === "daily") daily += 1;
+      else if (!n.group) root += 1;
+      else counts.set(n.group, (counts.get(n.group) ?? 0) + 1);
     }
-    if (isActive || isHover) {
-      return { fill: palette.accent, stroke: palette.accent, label: palette.label };
-    }
-    if (n.kind === "daily") {
-      return { fill: palette.secondary, stroke: palette.secondary, label: palette.label };
-    }
-    return {
-      fill: palette.neutral,
-      stroke: palette.neutralStroke,
-      label: palette.label,
-    };
-  };
+    const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    const top = sorted.slice(0, 8);
+    const others = sorted
+      .slice(8)
+      .reduce((acc, [, c]) => acc + c, 0);
+    return { top, others, root, daily };
+  }, [data.nodes]);
 
   return (
     <div
@@ -164,43 +216,23 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
         }}
       >
         <span className="text-[13px] font-semibold tracking-tight">Graph</span>
-        <div className="flex items-center gap-2 text-[11px]" style={{ color: "var(--vf-muted)" }}>
-          <span className="inline-flex items-center gap-1.5">
-            <span
-              style={{
-                display: "inline-block",
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: palette.accent,
-              }}
+        <div
+          className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]"
+          style={{ color: "var(--vf-muted)" }}
+        >
+          <LegendChip color={chrome.accent} label="Active" />
+          {legend.daily > 0 && <LegendChip color={DAILY_HUE} label={`Daily (${legend.daily})`} />}
+          {legend.root > 0 && <LegendChip color={chrome.rootHue} label={`Root (${legend.root})`} />}
+          {legend.top.map(([folder, count]) => (
+            <LegendChip
+              key={folder}
+              color={folderColor.get(folder) ?? chrome.rootHue}
+              label={`${folder} (${count})`}
             />
-            Active / hovered
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span
-              style={{
-                display: "inline-block",
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: palette.secondary,
-              }}
-            />
-            Daily
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span
-              style={{
-                display: "inline-block",
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: palette.neutral,
-              }}
-            />
-            Note
-          </span>
+          ))}
+          {legend.others > 0 && (
+            <LegendChip color={chrome.rootHue} label={`others (${legend.others})`} />
+          )}
         </div>
         <button
           onClick={onClose}
@@ -213,11 +245,10 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
       </div>
 
       <div ref={containerRef} className="relative flex-1 overflow-hidden">
-        {/* Dot grid background */}
         <div
           className="pointer-events-none absolute inset-0"
           style={{
-            backgroundImage: `radial-gradient(${palette.dot} 1px, transparent 1px)`,
+            backgroundImage: `radial-gradient(${chrome.dot} 1px, transparent 1px)`,
             backgroundSize: "22px 22px",
           }}
         />
@@ -233,9 +264,11 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
             linkColor={(link) => {
               const s = link.source as unknown as GNode;
               const t = link.target as unknown as GNode;
-              if (hoverId && (s.id === hoverId || t.id === hoverId))
-                return palette.linkHighlight;
-              return palette.linkColor;
+              if (hoverId && (s.id === hoverId || t.id === hoverId)) {
+                const hovered = s.id === hoverId ? s : t;
+                return withAlpha(hovered.color, 0.55);
+              }
+              return chrome.linkColor;
             }}
             linkWidth={(link) => {
               const s = link.source as unknown as GNode;
@@ -246,24 +279,50 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
             nodeCanvasObject={(node, ctx, globalScale) => {
               const n = node as GNode;
               if (n.x == null || n.y == null) return;
-              const { fill, stroke, label } = colorFor(n);
-              const r = radiusFor(n.degree);
+
+              const isActive = n.id === activeNoteId;
+              const isHover = n.id === hoverId;
+              const isNeighbor =
+                hoverId != null &&
+                (hoverId === n.id || neighborsById.get(hoverId)?.has(n.id));
+              const isDimmed = hoverId != null && !isNeighbor && !isActive;
+              const isOrphan = n.degree === 0;
+
+              // Opacity: hover-dim → 0.22; orphan (no hover) → 0.55; else 1.
+              let alpha = 1;
+              if (isDimmed) alpha = 0.22;
+              else if (isOrphan && !isHover && !isActive) alpha = 0.55;
+
+              const fill = isActive || isHover ? chrome.accent : n.color;
+              const r = radiusFor(n.degree, isActive);
+
+              ctx.globalAlpha = alpha;
+
+              // Node
               ctx.beginPath();
               ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
               ctx.fillStyle = fill;
               ctx.fill();
-              ctx.lineWidth = 1.5 / globalScale;
-              ctx.strokeStyle = stroke;
-              ctx.stroke();
+              // Halo ring for active
+              if (isActive) {
+                ctx.lineWidth = 2 / globalScale;
+                ctx.strokeStyle = withAlpha(chrome.accent, 0.35);
+                ctx.beginPath();
+                ctx.arc(n.x, n.y, r + 3, 0, Math.PI * 2);
+                ctx.stroke();
+              }
 
-              const isFocus = n.id === hoverId || n.id === activeNoteId;
+              // Label
+              const isFocus = isHover || isActive;
               if (globalScale > 0.7 || isFocus) {
                 const fontSize = Math.max(11, 12 / globalScale);
                 ctx.font = `${isFocus ? 600 : 400} ${fontSize}px ui-sans-serif, system-ui, -apple-system`;
-                ctx.fillStyle = label;
+                ctx.fillStyle = isDimmed ? chrome.labelDim : chrome.label;
                 ctx.textBaseline = "middle";
                 ctx.fillText(n.name, n.x + r + 4, n.y);
               }
+
+              ctx.globalAlpha = 1;
             }}
             onNodeClick={(node) => {
               setActiveNote(String((node as GNode).id));
@@ -272,7 +331,6 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
           />
         )}
 
-        {/* Floating zoom controls */}
         <div
           className="absolute bottom-4 right-4 flex flex-col overflow-hidden"
           style={{
@@ -335,5 +393,24 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function LegendChip({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span
+        style={{
+          display: "inline-block",
+          width: 8,
+          height: 8,
+          borderRadius: "50%",
+          background: color,
+        }}
+      />
+      <span className="truncate" style={{ maxWidth: 120 }}>
+        {label}
+      </span>
+    </span>
   );
 }

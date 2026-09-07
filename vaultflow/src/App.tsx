@@ -1,8 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import FileTree from "./features/filetree/FileTree";
 import Editor from "./features/editor/Editor";
 import BacklinksPanel from "./features/backlinks/BacklinksPanel";
 import TagPane from "./features/tags/TagPane";
+import CommandPalette from "./features/commandpalette/CommandPalette";
 import { useVaultStore } from "./stores/useVaultStore";
 import { useUiStore } from "./stores/useUiStore";
 
@@ -16,10 +17,23 @@ export default function App() {
   const theme = useUiStore((s) => s.theme);
   const toggleTheme = useUiStore((s) => s.toggleTheme);
 
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
   useEffect(() => {
     void loadAll();
     void loadTheme();
   }, [loadAll, loadTheme]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   return (
     <div className="flex h-screen bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
@@ -60,6 +74,7 @@ export default function App() {
           </div>
         )}
       </main>
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   );
 }

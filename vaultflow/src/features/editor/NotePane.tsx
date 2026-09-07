@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Editor from "./Editor";
+import TableToolbar from "./TableToolbar";
+import { allEditors } from "./focusedEditor";
 import BacklinksPanel from "../backlinks/BacklinksPanel";
 import UnlinkedMentions from "../backlinks/UnlinkedMentions";
 import Icon from "../../components/Icon";
@@ -12,6 +14,16 @@ interface Props {
   noteId: string;
   showBacklinks?: boolean;
   actions?: React.ReactNode;
+}
+
+function TableToolbarHost() {
+  const [views, setViews] = useState(() => allEditors());
+  useEffect(() => {
+    // Poll the registry once per second; also update on visibility events.
+    const id = setInterval(() => setViews(allEditors()), 500);
+    return () => clearInterval(id);
+  }, []);
+  return <TableToolbar views={views} />;
 }
 
 function NoteMenu({ note }: { note: Note }) {
@@ -216,6 +228,7 @@ export default function NotePane({ noteId, showBacklinks = true, actions }: Prop
       </div>
       <div className="flex-1 overflow-hidden">
         <Editor noteId={note.id} initialContent={note.content} />
+        <TableToolbarHost />
       </div>
       {showBacklinks && (
         <>

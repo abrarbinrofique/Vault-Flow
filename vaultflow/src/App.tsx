@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import FileTree from "./features/filetree/FileTree";
 import NotePane from "./features/editor/NotePane";
 import TagPane from "./features/tags/TagPane";
+import SmartSection from "./features/smart/SmartSection";
 import CommandPalette from "./features/commandpalette/CommandPalette";
 import GraphView from "./features/graph/GraphView";
 import EmptyState from "./features/editor/EmptyState";
@@ -11,6 +12,7 @@ import { QuickCaptureHost } from "./features/capture/QuickCapture";
 import Icon from "./components/Icon";
 import { useVaultStore } from "./stores/useVaultStore";
 import { useUiStore } from "./stores/useUiStore";
+import { useSmartStore } from "./stores/useSmartStore";
 import { openDailyNote } from "./features/dailynotes/openDailyNote";
 import { useIsMobile } from "./hooks/useMediaQuery";
 
@@ -34,6 +36,7 @@ export default function App() {
   useEffect(() => {
     void loadAll();
     void loadTheme();
+    void useSmartStore.getState().load();
   }, [loadAll, loadTheme]);
 
   // On first mobile detection, collapse the sidebar so it stays hidden by default.
@@ -180,6 +183,7 @@ export default function App() {
           {loaded ? (
             <div className="flex min-h-0 flex-1 flex-col">
               <TagPane />
+              <SmartSection />
               <FileTree />
             </div>
           ) : (

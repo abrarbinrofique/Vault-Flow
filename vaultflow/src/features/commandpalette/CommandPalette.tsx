@@ -8,6 +8,7 @@ import {
   listTemplates,
   promptAndCreateFromTemplate,
 } from "../templates/newFromTemplate";
+import { useSmartStore } from "../../stores/useSmartStore";
 
 interface HighlightedSnippet {
   before: string;
@@ -165,6 +166,19 @@ export default function CommandPalette({ open, onClose }: Props) {
           },
         });
       }
+
+      out.push({
+        kind: "command",
+        id: `save-search:${q}`,
+        label: `Save search "${q}" as smart folder`,
+        hint: "Save",
+        icon: <Icon name="search" size={14} />,
+        run: async () => {
+          const name = window.prompt("Smart folder name", q);
+          if (!name) return;
+          await useSmartStore.getState().add({ name, query: q });
+        },
+      });
     } else {
       out.push(...builtins);
       const recent = Object.values(notes)

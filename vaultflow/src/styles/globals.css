@@ -2,71 +2,327 @@
 
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
+/* --------------------------------------------------------------------------
+ * Design tokens
+ * ------------------------------------------------------------------------ */
+html {
+  color-scheme: light;
+
+  /* Surfaces */
+  --vf-bg: #ffffff;
+  --vf-surface: #fafafa;
+  --vf-surface-hover: #f4f4f5;
+  --vf-surface-active: #ececee;
+  --vf-sidebar: #fafafa;
+  --vf-topbar: #ffffff;
+
+  /* Text */
+  --vf-fg: #111827;
+  --vf-fg-secondary: #374151;
+  --vf-muted: #6b7280;
+  --vf-subtle: #9ca3af;
+
+  /* Structure */
+  --vf-border: #e7e7ea;
+  --vf-border-strong: #d4d4d8;
+
+  /* Accent (indigo-violet — Obsidian-ish) */
+  --vf-accent: #6d5cf5;
+  --vf-accent-hover: #5b48e8;
+  --vf-accent-soft: color-mix(in oklab, #6d5cf5 12%, transparent);
+  --vf-accent-tint: color-mix(in oklab, #6d5cf5 18%, transparent);
+  --vf-on-accent: #ffffff;
+
+  /* Focus ring */
+  --vf-ring: color-mix(in oklab, #6d5cf5 40%, transparent);
+
+  /* Radii + shadows */
+  --vf-radius-sm: 4px;
+  --vf-radius: 6px;
+  --vf-radius-lg: 10px;
+  --vf-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --vf-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --vf-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.14);
+
+  /* Typography */
+  --vf-font-sans:
+    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --vf-font-mono:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo,
+    Consolas, "Liberation Mono", monospace;
+
+  --vf-text-xs: 11px;
+  --vf-text-sm: 13px;
+  --vf-text: 14px;
+  --vf-text-editor: 15px;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --vf-bg: #101115;
+  --vf-surface: #16181d;
+  --vf-surface-hover: #1c1f26;
+  --vf-surface-active: #23262e;
+  --vf-sidebar: #0c0d10;
+  --vf-topbar: #101115;
+
+  --vf-fg: #e5e7eb;
+  --vf-fg-secondary: #cbd0d8;
+  --vf-muted: #8b929e;
+  --vf-subtle: #5d6470;
+
+  --vf-border: #23262e;
+  --vf-border-strong: #2e323c;
+
+  --vf-accent: #8b7cff;
+  --vf-accent-hover: #a293ff;
+  --vf-accent-soft: color-mix(in oklab, #8b7cff 14%, transparent);
+  --vf-accent-tint: color-mix(in oklab, #8b7cff 22%, transparent);
+  --vf-on-accent: #0b0d12;
+
+  --vf-ring: color-mix(in oklab, #8b7cff 50%, transparent);
+
+  --vf-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --vf-shadow-md: 0 6px 18px rgba(0, 0, 0, 0.45);
+  --vf-shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.55);
+}
+
+/* --------------------------------------------------------------------------
+ * Base
+ * ------------------------------------------------------------------------ */
 html,
 body,
 #root {
   height: 100%;
 }
 
-html {
-  color-scheme: light;
-  --vf-bg: #ffffff;
-  --vf-panel: #f8fafc;
-  --vf-fg: #111827;
-  --vf-muted: #6b7280;
-  --vf-border: #e5e7eb;
-  --vf-accent: #2563eb;
-}
-html[data-theme="dark"] {
-  color-scheme: dark;
-  --vf-bg: #0b0f19;
-  --vf-panel: #111827;
-  --vf-fg: #e5e7eb;
-  --vf-muted: #9ca3af;
-  --vf-border: #1f2937;
-  --vf-accent: #60a5fa;
-}
-
 body {
   background: var(--vf-bg);
   color: var(--vf-fg);
-  transition: background-color 150ms ease, color 150ms ease;
+  font-family: var(--vf-font-sans);
+  font-size: var(--vf-text-sm);
+  line-height: 1.55;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
 }
 
-/* CodeMirror integration with theme vars */
+*,
+*::before,
+*::after {
+  border-color: var(--vf-border);
+}
+
+button {
+  font-family: inherit;
+}
+
+/* Focus ring */
+:focus-visible {
+  outline: 2px solid var(--vf-ring);
+  outline-offset: 2px;
+  border-radius: var(--vf-radius-sm);
+}
+
+/* Scrollbars — thin, flat, themed */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--vf-border-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--vf-border-strong);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--vf-muted);
+  background-clip: padding-box;
+}
+
+/* --------------------------------------------------------------------------
+ * CodeMirror integration
+ * ------------------------------------------------------------------------ */
 .cm-editor {
   background: var(--vf-bg);
   color: var(--vf-fg);
+  font-size: var(--vf-text-editor);
+  line-height: 1.7;
+  height: 100%;
+}
+.cm-editor .cm-scroller {
+  font-family: var(--vf-font-mono);
+  padding: 8px 0;
+}
+.cm-editor .cm-content {
+  padding: 24px max(24px, calc((100% - 72ch) / 2));
+  caret-color: var(--vf-accent);
+}
+.cm-editor .cm-line {
+  padding: 0;
 }
 .cm-editor .cm-gutters {
-  background: var(--vf-panel);
-  color: var(--vf-muted);
-  border-right: 1px solid var(--vf-border);
+  background: transparent;
+  color: var(--vf-subtle);
+  border-right: 1px solid transparent;
+  padding-right: 4px;
 }
 .cm-editor .cm-activeLine {
-  background: color-mix(in oklab, var(--vf-accent) 8%, transparent);
+  background: color-mix(in oklab, var(--vf-accent) 5%, transparent);
 }
 .cm-editor .cm-activeLineGutter {
-  background: color-mix(in oklab, var(--vf-accent) 12%, transparent);
+  background: transparent;
+  color: var(--vf-fg-secondary);
 }
 .cm-editor .cm-cursor,
 .cm-editor .cm-dropCursor {
-  border-left-color: var(--vf-accent);
+  border-left: 2px solid var(--vf-accent);
 }
 .cm-editor .cm-selectionBackground,
 .cm-editor.cm-focused .cm-selectionBackground,
 .cm-editor ::selection {
-  background: color-mix(in oklab, var(--vf-accent) 25%, transparent) !important;
+  background: var(--vf-accent-tint) !important;
+}
+.cm-editor .cm-wikilink {
+  color: var(--vf-accent);
+  text-decoration: none;
+  border-bottom: 1px dashed color-mix(in oklab, var(--vf-accent) 60%, transparent);
+  cursor: pointer;
+  transition: color 120ms ease;
+}
+.cm-editor .cm-wikilink:hover {
+  color: var(--vf-accent-hover);
+  border-bottom-color: var(--vf-accent-hover);
+}
+.cm-editor .cm-wl-alias {
+  color: var(--vf-accent);
+  text-decoration: none;
+  border-bottom: 1px dashed color-mix(in oklab, var(--vf-accent) 60%, transparent);
+  cursor: pointer;
+}
+.cm-editor .cm-wl-hide {
+  opacity: 0;
+  font-size: 0.001em;
 }
 
 /* Autocomplete popup */
 .cm-tooltip.cm-tooltip-autocomplete {
-  background: var(--vf-panel);
+  background: var(--vf-surface);
   color: var(--vf-fg);
   border: 1px solid var(--vf-border);
-  border-radius: 6px;
+  border-radius: var(--vf-radius);
+  box-shadow: var(--vf-shadow-md);
+  padding: 4px;
+  font-family: var(--vf-font-sans);
+  font-size: var(--vf-text-sm);
+}
+.cm-tooltip.cm-tooltip-autocomplete > ul {
+  max-height: 240px;
+}
+.cm-tooltip.cm-tooltip-autocomplete > ul > li {
+  padding: 6px 10px;
+  border-radius: var(--vf-radius-sm);
 }
 .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
   background: var(--vf-accent);
-  color: white;
+  color: var(--vf-on-accent);
+}
+
+/* --------------------------------------------------------------------------
+ * Utility helpers (used from JSX via className)
+ * ------------------------------------------------------------------------ */
+.vf-panel {
+  background: var(--vf-surface);
+  border: 1px solid var(--vf-border);
+  border-radius: var(--vf-radius);
+}
+.vf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--vf-radius);
+  color: var(--vf-fg-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  font-size: var(--vf-text-sm);
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    border-color 140ms ease;
+}
+.vf-btn:hover {
+  background: var(--vf-surface-hover);
+  color: var(--vf-fg);
+}
+.vf-btn:active {
+  background: var(--vf-surface-active);
+}
+.vf-btn-primary {
+  background: var(--vf-accent);
+  color: var(--vf-on-accent);
+  border-color: transparent;
+}
+.vf-btn-primary:hover {
+  background: var(--vf-accent-hover);
+  color: var(--vf-on-accent);
+}
+.vf-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--vf-radius);
+  color: var(--vf-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+.vf-icon-btn:hover {
+  background: var(--vf-surface-hover);
+  color: var(--vf-fg);
+}
+.vf-icon-btn:active {
+  background: var(--vf-surface-active);
+}
+
+.vf-kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  font-family: var(--vf-font-mono);
+  font-size: 10.5px;
+  color: var(--vf-muted);
+  background: var(--vf-surface-hover);
+  border: 1px solid var(--vf-border);
+  border-radius: 4px;
+  line-height: 1.4;
+}
+
+/* --------------------------------------------------------------------------
+ * Chevron rotation
+ * ------------------------------------------------------------------------ */
+.vf-chevron {
+  transition: transform 160ms ease;
+}
+.vf-chevron.is-open {
+  transform: rotate(90deg);
 }

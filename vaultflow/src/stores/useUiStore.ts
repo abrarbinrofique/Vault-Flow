@@ -9,11 +9,13 @@ interface UiState {
   theme: Theme;
   tagFilter: string | null;
   splitNoteId: string | null;
+  sidebarCollapsed: boolean;
   loadTheme: () => Promise<void>;
   toggleTheme: () => Promise<void>;
   setTagFilter: (tag: string | null) => void;
   openSplit: (noteId: string) => void;
   closeSplit: () => void;
+  toggleSidebar: () => void;
 }
 
 function applyTheme(theme: Theme) {
@@ -27,6 +29,8 @@ export const useUiStore = create<UiState>((set, get) => ({
   splitNoteId: null,
   openSplit: (noteId) => set({ splitNoteId: noteId }),
   closeSplit: () => set({ splitNoteId: null }),
+  sidebarCollapsed: false,
+  toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   loadTheme: async () => {
     const stored = (await getMeta<Theme>(THEME_KEY)) ?? "light";
     applyTheme(stored);

@@ -4,8 +4,11 @@ import NotePane from "./features/editor/NotePane";
 import TagPane from "./features/tags/TagPane";
 import CommandPalette from "./features/commandpalette/CommandPalette";
 import GraphView from "./features/graph/GraphView";
+import EmptyState from "./features/editor/EmptyState";
+import Icon from "./components/Icon";
 import { useVaultStore } from "./stores/useVaultStore";
 import { useUiStore } from "./stores/useUiStore";
+import { openDailyNote } from "./features/dailynotes/openDailyNote";
 
 export default function App() {
   const loadAll = useVaultStore((s) => s.loadAll);
@@ -17,6 +20,8 @@ export default function App() {
   const splitNoteId = useUiStore((s) => s.splitNoteId);
   const openSplit = useUiStore((s) => s.openSplit);
   const closeSplit = useUiStore((s) => s.closeSplit);
+  const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
+  const toggleSidebar = useUiStore((s) => s.toggleSidebar);
 
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [graphOpen, setGraphOpen] = useState(false);
@@ -32,94 +37,158 @@ export default function App() {
         e.preventDefault();
         setPaletteOpen((v) => !v);
       }
+      if ((e.metaKey || e.ctrlKey) && e.key === "\\") {
+        e.preventDefault();
+        toggleSidebar();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [toggleSidebar]);
 
   return (
-    <div
-      className="flex h-screen"
-      style={{ background: "var(--vf-bg)", color: "var(--vf-fg)" }}
-    >
-      <aside
-        className="flex w-64 flex-col border-r"
-        style={{ borderColor: "var(--vf-border)" }}
+    <div className="flex h-screen">
+      {/* Icon rail */}
+      <div
+        className="flex w-11 flex-col items-center justify-between border-r py-2"
+        style={{
+          background: "var(--vf-sidebar)",
+          borderColor: "var(--vf-border)",
+        }}
       >
-        <div
-          className="flex items-center justify-between border-b px-3 py-2"
-          style={{ borderColor: "var(--vf-border)" }}
+        <div className="flex flex-col items-center gap-1">
+          <button
+            className="vf-icon-btn"
+            onClick={toggleSidebar}
+            aria-label="Toggle sidebar (Ctrl+\)"
+            title="Toggle sidebar"
+          >
+            <Icon name="sidebar" />
+          </button>
+          <button
+            className="vf-icon-btn"
+            onClick={() => setPaletteOpen(true)}
+            aria-label="Open command palette (Ctrl+P)"
+            title="Search (Ctrl+P)"
+          >
+            <Icon name="search" />
+          </button>
+          <button
+            className="vf-icon-btn"
+            onClick={() => setGraphOpen(true)}
+            aria-label="Open graph view"
+            title="Graph view"
+          >
+            <Icon name="graph" />
+          </button>
+          <button
+            className="vf-icon-btn"
+            onClick={() => void openDailyNote()}
+            aria-label="Open today's daily note"
+            title="Daily note"
+          >
+            <Icon name="calendar" />
+          </button>
+        </div>
+        <button
+          className="vf-icon-btn"
+          onClick={() => void toggleTheme()}
+          aria-label="Toggle theme"
+          title="Toggle theme"
         >
-          <span className="text-sm font-semibold">VaultFlow</span>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setGraphOpen(true)}
-              className="text-xs opacity-70 hover:opacity-100"
-              title="Graph view"
+          <Icon name={theme === "dark" ? "sun" : "moon"} />
+        </button>
+      </div>
+
+      {/* Sidebar */}
+      {!sidebarCollapsed && (
+        <aside
+          className="flex w-64 flex-col border-r"
+          style={{
+            background: "var(--vf-sidebar)",
+            borderColor: "var(--vf-border)",
+          }}
+        >
+          <div
+            className="flex items-center justify-between px-3"
+            style={{ height: 44 }}
+          >
+            <span
+              className="text-[13px] font-semibold tracking-tight"
+              style={{ color: "var(--vf-fg)" }}
             >
-              ◎
-            </button>
+              VaultFlow
+            </span>
             <button
-              onClick={() => void toggleTheme()}
-              className="text-xs opacity-70 hover:opacity-100"
-              title="Toggle theme"
+              className="vf-btn vf-btn-primary"
+              onClick={async () => {
+                const t = window.prompt("New note title");
+                if (t) await useVaultStore.getState().createNote({ title: t });
+              }}
+              style={{ height: 26, padding: "0 8px", fontSize: 12 }}
             >
-              {theme === "dark" ? "☀︎" : "☾"}
+              <Icon name="plus" size={13} />
+              New
             </button>
           </div>
-        </div>
-        {loaded ? (
-          <>
-            <TagPane />
-            <FileTree />
-          </>
-        ) : (
-          <div className="p-3 text-xs opacity-70">Loading…</div>
-        )}
-      </aside>
-      <main className="flex flex-1 overflow-hidden">
+          {loaded ? (
+            <div className="flex min-h-0 flex-1 flex-col">
+              <TagPane />
+              <FileTree />
+            </div>
+          ) : (
+            <div className="p-3 text-xs" style={{ color: "var(--vf-muted)" }}>
+              Loading…
+            </div>
+          )}
+        </aside>
+      )}
+
+      {/* Main area */}
+      <main className="flex flex-1 overflow-hidden" style={{ background: "var(--vf-bg)" }}>
         {activeNoteId ? (
           <div
-            className={splitNoteId ? "flex-1 border-r" : "flex-1"}
+            className={splitNoteId ? "flex flex-1 flex-col border-r" : "flex flex-1 flex-col"}
             style={{ borderColor: "var(--vf-border)" }}
           >
             <NotePane
               noteId={activeNoteId}
-              right={
+              actions={
                 !splitNoteId && (
                   <button
                     onClick={() => openSplit(activeNoteId)}
-                    className="text-xs opacity-70 hover:opacity-100"
+                    className="vf-icon-btn"
+                    aria-label="Split right"
                     title="Split right"
                   >
-                    ⇹
+                    <Icon name="split" />
                   </button>
                 )
               }
             />
           </div>
         ) : (
-          <div className="flex flex-1 items-center justify-center text-sm opacity-60">
-            Select or create a note.
-          </div>
+          <EmptyState />
         )}
         {splitNoteId && (
-          <div className="flex-1">
+          <div className="flex flex-1 flex-col">
             <NotePane
               noteId={splitNoteId}
-              right={
+              actions={
                 <button
                   onClick={closeSplit}
-                  className="text-xs opacity-70 hover:opacity-100"
+                  className="vf-icon-btn"
+                  aria-label="Close split"
                   title="Close split"
                 >
-                  ✕
+                  <Icon name="close" />
                 </button>
               }
             />
           </div>
         )}
       </main>
+
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       {graphOpen && <GraphView onClose={() => setGraphOpen(false)} />}
     </div>

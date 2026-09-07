@@ -11,6 +11,7 @@ import {
 import { useSmartStore } from "../../stores/useSmartStore";
 import { insertTableAtCursor } from "../editor/insertTable";
 import { importLibraryFromPicker } from "../drawing/importLibrary";
+import { promptText } from "../../components/dialog";
 
 interface HighlightedSnippet {
   before: string;
@@ -114,7 +115,11 @@ export default function CommandPalette({ open, onClose }: Props) {
         hint: "Command",
         icon: <Icon name="pen" size={14} />,
         run: async () => {
-          const t = window.prompt("New drawing title");
+          const t = await promptText({
+            title: "New drawing",
+            label: "Title",
+            submitLabel: "Create",
+          });
           if (!t) return;
           await useVaultStore
             .getState()
@@ -164,9 +169,14 @@ export default function CommandPalette({ open, onClose }: Props) {
             window.alert("Vault is already empty.");
             return;
           }
-          const answer = window.prompt(
-            `This will permanently delete all ${count} note${count === 1 ? "" : "s"} and folder structure from the browser (IndexedDB).\n\nType DELETE to confirm.`,
-          );
+          const answer = await promptText({
+            title: `Clear vault (${count} note${count === 1 ? "" : "s"})?`,
+            label: "Type DELETE to confirm — this cannot be undone",
+            placeholder: "DELETE",
+            submitLabel: "Clear vault",
+            danger: true,
+            validate: (v) => (v === "DELETE" ? null : "Type DELETE exactly"),
+          });
           if (answer !== "DELETE") return;
           await useVaultStore.getState().clearVault();
         },
@@ -220,7 +230,12 @@ export default function CommandPalette({ open, onClose }: Props) {
         hint: "Save",
         icon: <Icon name="search" size={14} />,
         run: async () => {
-          const name = window.prompt("Smart folder name", q);
+          const name = await promptText({
+            title: "Save as smart folder",
+            label: "Name",
+            initialValue: q,
+            submitLabel: "Save",
+          });
           if (!name) return;
           await useSmartStore.getState().add({ name, query: q });
         },

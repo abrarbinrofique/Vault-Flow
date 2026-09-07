@@ -1,6 +1,7 @@
 import Icon from "../../components/Icon";
 import { useVaultStore } from "../../stores/useVaultStore";
 import { openDailyNote } from "../dailynotes/openDailyNote";
+import { promptText } from "../../components/dialog";
 
 export default function EmptyState() {
   const createNote = useVaultStore((s) => s.createNote);
@@ -31,7 +32,11 @@ export default function EmptyState() {
           <button
             className="vf-btn vf-btn-primary"
             onClick={async () => {
-              const t = window.prompt("New note title");
+              const t = await promptText({
+                title: "New note",
+                label: "Title",
+                submitLabel: "Create",
+              });
               if (t) await createNote({ title: t });
             }}
           >

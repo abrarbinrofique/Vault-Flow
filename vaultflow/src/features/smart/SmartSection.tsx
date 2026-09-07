@@ -6,24 +6,41 @@ import {
   evaluateSmartFolder,
   type SmartFolder,
 } from "../../lib/smartFolders";
+import { confirmDialog, promptText } from "../../components/dialog";
 
-function editFolderPrompt(prev?: Partial<SmartFolder>): Partial<SmartFolder> | null {
-  const name = window.prompt("Smart folder name", prev?.name ?? "");
+async function editFolderPrompt(
+  prev?: Partial<SmartFolder>,
+): Promise<Partial<SmartFolder> | null> {
+  const name = await promptText({
+    title: prev ? "Edit smart folder" : "New smart folder",
+    label: "Name",
+    initialValue: prev?.name ?? "",
+    submitLabel: "Next",
+  });
   if (!name) return null;
-  const query = window.prompt(
-    "Search query (optional — MiniSearch matches title + body)",
-    prev?.query ?? "",
-  );
+  const query = await promptText({
+    title: "Search query",
+    label: "MiniSearch matches title + body (optional)",
+    initialValue: prev?.query ?? "",
+    placeholder: "e.g. project alpha",
+    submitLabel: "Next",
+  });
   if (query === null) return null;
-  const tags = window.prompt(
-    "Tag filter (comma-separated, without #; must have ALL listed tags)",
-    prev?.tags?.join(", ") ?? "",
-  );
+  const tags = await promptText({
+    title: "Tag filter",
+    label: "Comma-separated, without #; must have ALL listed tags",
+    initialValue: prev?.tags?.join(", ") ?? "",
+    placeholder: "todo, priority",
+    submitLabel: "Next",
+  });
   if (tags === null) return null;
-  const daysStr = window.prompt(
-    "Modified within last N days (blank for any)",
-    prev?.modifiedWithinDays ? String(prev.modifiedWithinDays) : "",
-  );
+  const daysStr = await promptText({
+    title: "Modified within last N days",
+    label: "Blank for any",
+    initialValue: prev?.modifiedWithinDays ? String(prev.modifiedWithinDays) : "",
+    placeholder: "7",
+    submitLabel: "Save",
+  });
   if (daysStr === null) return null;
 
   const parsedTags = tags
@@ -121,8 +138,16 @@ function SmartFolderRow({ folder }: { folder: SmartFolder }) {
                   onClick={(e) => {
                     e.stopPropagation();
                     setMenuOpen(false);
-                    const name = window.prompt("Rename smart folder", folder.name);
-                    if (name && name !== folder.name) void update(folder.id, { name });
+                    void (async () => {
+                      const name = await promptText({
+                        title: "Rename smart folder",
+                        label: "Name",
+                        initialValue: folder.name,
+                        submitLabel: "Rename",
+                      });
+                      if (name && name !== folder.name)
+                        await update(folder.id, { name });
+                    })();
                   }}
                 >
                   <Icon name="edit" size={13} /> Rename
@@ -133,8 +158,10 @@ function SmartFolderRow({ folder }: { folder: SmartFolder }) {
                   onClick={(e) => {
                     e.stopPropagation();
                     setMenuOpen(false);
-                    const patch = editFolderPrompt(folder);
-                    if (patch) void update(folder.id, patch);
+                    void (async () => {
+                      const patch = await editFolderPrompt(folder);
+                      if (patch) await update(folder.id, patch);
+                    })();
                   }}
                 >
                   <Icon name="search" size={13} /> Edit filters
@@ -145,8 +172,13 @@ function SmartFolderRow({ folder }: { folder: SmartFolder }) {
                   onClick={(e) => {
                     e.stopPropagation();
                     setMenuOpen(false);
-                    if (window.confirm(`Delete smart folder "${folder.name}"?`))
-                      void remove(folder.id);
+                    void (async () => {
+                      const ok = await confirmDialog({
+                        title: `Delete smart folder "${folder.name}"?`,
+                        danger: true,
+                      });
+                      if (ok) await remove(folder.id);
+                    })();
                   }}
                 >
                   <Icon name="trash" size={13} /> Delete
@@ -219,7 +251,7 @@ export default function SmartSection() {
   const add = useSmartStore((s) => s.add);
 
   const onAdd = async () => {
-    const draft = editFolderPrompt();
+    const draft = await editFolderPrompt();
     if (!draft || !draft.name) return;
     await add(draft as Omit<SmartFolder, "id">);
   };

@@ -1,16 +1,27 @@
 import { useState } from "react";
 import Icon from "../../components/Icon";
 import { useVaultStore } from "../../stores/useVaultStore";
+import { promptText } from "../../components/dialog";
 
 export default function NewNoteMenu() {
   const [open, setOpen] = useState(false);
 
   const newNote = async () => {
-    const t = window.prompt("New note title");
+    const t = await promptText({
+      title: "New note",
+      label: "Title",
+      placeholder: "e.g. Weekly review",
+      submitLabel: "Create",
+    });
     if (t) await useVaultStore.getState().createNote({ title: t });
   };
   const newDrawing = async () => {
-    const t = window.prompt("New drawing title");
+    const t = await promptText({
+      title: "New drawing",
+      label: "Title",
+      placeholder: "e.g. System diagram",
+      submitLabel: "Create",
+    });
     if (t)
       await useVaultStore
         .getState()

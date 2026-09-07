@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Icon from "../../components/Icon";
+import { confirmDialog } from "../../components/dialog";
 import {
   connectFolder,
   disconnectFolder,
@@ -59,7 +60,12 @@ export default function FolderStatus() {
 
   const onClick = async () => {
     if (status === "connected") {
-      if (!window.confirm("Disconnect local folder? Notes stay in the browser.")) return;
+      const ok = await confirmDialog({
+        title: "Disconnect local folder?",
+        message: "Notes stay in the browser (IndexedDB). You can reconnect at any time.",
+        confirmLabel: "Disconnect",
+      });
+      if (!ok) return;
       await disconnectFolder();
       return;
     }

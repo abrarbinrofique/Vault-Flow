@@ -4,6 +4,7 @@ import { useVaultStore } from "../../stores/useVaultStore";
 import { useUiStore } from "../../stores/useUiStore";
 import Icon from "../../components/Icon";
 import type { Folder, Note } from "../../types";
+import { confirmDialog, promptText } from "../../components/dialog";
 
 interface TreeNode {
   path: string;
@@ -190,7 +191,11 @@ function FolderRow({
               label: "New note",
               icon: <Icon name="plus" size={13} />,
               onClick: async () => {
-                const t = window.prompt("New note title");
+                const t = await promptText({
+                  title: "New note",
+                  label: "Title",
+                  submitLabel: "Create",
+                });
                 if (t) await actions.createNote({ title: t, path: node.path });
               },
             },
@@ -198,7 +203,11 @@ function FolderRow({
               label: "New folder",
               icon: <Icon name="folder" size={13} />,
               onClick: async () => {
-                const n = window.prompt("New folder name");
+                const n = await promptText({
+                  title: "New folder",
+                  label: "Name",
+                  submitLabel: "Create",
+                });
                 if (n) await actions.createFolder(n, node.path);
               },
             },
@@ -206,7 +215,12 @@ function FolderRow({
               label: "Rename",
               icon: <Icon name="edit" size={13} />,
               onClick: async () => {
-                const n = window.prompt("Rename folder", node.name);
+                const n = await promptText({
+                  title: "Rename folder",
+                  label: "Name",
+                  initialValue: node.name,
+                  submitLabel: "Rename",
+                });
                 if (n && n !== node.name) await actions.renameFolder(node.path, n);
               },
             },
@@ -215,8 +229,12 @@ function FolderRow({
               icon: <Icon name="trash" size={13} />,
               danger: true,
               onClick: async () => {
-                if (window.confirm(`Delete folder "${node.name}" and all its notes?`))
-                  await actions.deleteFolder(node.path);
+                const ok = await confirmDialog({
+                  title: `Delete folder "${node.name}"?`,
+                  message: "All notes inside this folder will be removed. This cannot be undone.",
+                  danger: true,
+                });
+                if (ok) await actions.deleteFolder(node.path);
               },
             },
           ]}
@@ -253,7 +271,12 @@ function NoteRow({ note, depth }: { note: Note; depth: number }) {
               label: "Rename",
               icon: <Icon name="edit" size={13} />,
               onClick: async () => {
-                const n = window.prompt("Rename note", note.title);
+                const n = await promptText({
+                  title: "Rename note",
+                  label: "Title",
+                  initialValue: note.title,
+                  submitLabel: "Rename",
+                });
                 if (n && n !== note.title) await actions.renameNote(note.id, n);
               },
             },
@@ -262,8 +285,12 @@ function NoteRow({ note, depth }: { note: Note; depth: number }) {
               icon: <Icon name="trash" size={13} />,
               danger: true,
               onClick: async () => {
-                if (window.confirm(`Delete "${note.title}"?`))
-                  await actions.deleteNote(note.id);
+                const ok = await confirmDialog({
+                  title: `Delete "${note.title}"?`,
+                  message: "This note will be permanently removed.",
+                  danger: true,
+                });
+                if (ok) await actions.deleteNote(note.id);
               },
             },
           ]}

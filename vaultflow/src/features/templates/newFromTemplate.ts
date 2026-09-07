@@ -2,6 +2,7 @@ import type { Note } from "../../types";
 import { useVaultStore } from "../../stores/useVaultStore";
 import { isTemplatePath, substituteTemplate } from "../../lib/templates";
 import { setPendingCursor } from "../editor/pendingCursor";
+import { promptText } from "../../components/dialog";
 
 export function listTemplates(): Note[] {
   const notes = useVaultStore.getState().notes;
@@ -30,7 +31,11 @@ export async function createFromTemplate(
 export async function promptAndCreateFromTemplate(
   template: Note,
 ): Promise<Note | null> {
-  const title = window.prompt(`New note from "${template.title}" — title?`);
+  const title = await promptText({
+    title: `New from "${template.title}"`,
+    label: "Title",
+    submitLabel: "Create",
+  });
   if (!title) return null;
   return createFromTemplate(template, title);
 }

@@ -8,6 +8,7 @@ import GraphView from "./features/graph/GraphView";
 import EmptyState from "./features/editor/EmptyState";
 import FolderStatus from "./features/folder/FolderStatus";
 import NewNoteMenu from "./features/sidebar/NewNoteMenu";
+import { DialogHost } from "./components/dialog";
 import VaultActions from "./features/folder/VaultActions";
 import { QuickCaptureHost } from "./features/capture/QuickCapture";
 import Icon from "./components/Icon";
@@ -233,6 +234,7 @@ export default function App() {
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       {graphOpen && <GraphView onClose={() => setGraphOpen(false)} />}
       <QuickCaptureHost />
+      <DialogHost />
     </div>
   );
 }

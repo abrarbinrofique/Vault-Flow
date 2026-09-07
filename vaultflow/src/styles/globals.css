@@ -390,11 +390,14 @@ button {
   border-bottom-right-radius: 4px;
 }
 
-/* Copy button floating at top-right of fenced code blocks */
+/* Copy button pinned to the top-right INSIDE the fenced code block */
+.cm-editor .cm-md-codeblock-first {
+  position: relative;
+}
 .cm-editor .cm-copy-btn {
   position: absolute;
+  top: 4px;
   right: 8px;
-  transform: translateY(4px);
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -408,12 +411,14 @@ button {
   cursor: pointer;
   opacity: 0;
   transition: opacity 140ms ease, color 140ms ease, background-color 140ms ease;
+  z-index: 2;
 }
-.cm-editor .cm-line:hover .cm-copy-btn,
-.cm-editor .cm-md-codeblock:hover ~ .cm-line .cm-copy-btn,
-.cm-editor .cm-copy-btn:focus-visible,
+/* Show on hover of any line in the same code block */
+.cm-editor .cm-md-codeblock:hover .cm-copy-btn,
+.cm-editor .cm-md-codeblock:has(+ .cm-md-codeblock:hover) .cm-copy-btn,
+.cm-editor .cm-md-codeblock-first:hover .cm-copy-btn,
 .cm-editor .cm-copy-btn:hover,
-.cm-editor .cm-md-codeblock-first:hover .cm-copy-btn {
+.cm-editor .cm-copy-btn:focus-visible {
   opacity: 1;
 }
 .cm-editor .cm-copy-btn:hover {

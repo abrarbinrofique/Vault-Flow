@@ -5,6 +5,7 @@ import TagPane from "./features/tags/TagPane";
 import CommandPalette from "./features/commandpalette/CommandPalette";
 import GraphView from "./features/graph/GraphView";
 import EmptyState from "./features/editor/EmptyState";
+import FolderStatus from "./features/folder/FolderStatus";
 import Icon from "./components/Icon";
 import { useVaultStore } from "./stores/useVaultStore";
 import { useUiStore } from "./stores/useUiStore";
@@ -89,6 +90,7 @@ export default function App() {
           >
             <Icon name="calendar" />
           </button>
+          <FolderStatus />
         </div>
         <button
           className="vf-icon-btn"

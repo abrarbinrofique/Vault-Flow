@@ -3,13 +3,16 @@ import { EditorState } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown } from "@codemirror/lang-markdown";
+import { completionKeymap } from "@codemirror/autocomplete";
 import { useVaultStore } from "../../stores/useVaultStore";
 import { debounce } from "../../lib/debounce";
+import { wikilinkAutocomplete } from "./wikilinkComplete";
 
 const baseExtensions = [
   history(),
-  keymap.of([...defaultKeymap, ...historyKeymap]),
+  keymap.of([...defaultKeymap, ...historyKeymap, ...completionKeymap]),
   markdown(),
+  wikilinkAutocomplete(),
   EditorView.lineWrapping,
   lineNumbers(),
   EditorView.theme({

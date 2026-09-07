@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useVaultStore } from "../../stores/useVaultStore";
+import { useUiStore } from "../../stores/useUiStore";
 import type { Folder, Note } from "../../types";
 
 interface TreeNode {
@@ -169,9 +170,22 @@ export default function FileTree() {
   const createNote = useVaultStore((s) => s.createNote);
   const createFolder = useVaultStore((s) => s.createFolder);
 
+  const tagFilter = useUiStore((s) => s.tagFilter);
+  const tagIds = useVaultStore((s) =>
+    tagFilter ? s.linkIndex.tags[tagFilter] : null,
+  );
+
+  const filteredNotes = useMemo(() => {
+    if (!tagFilter || !tagIds) return notes;
+    const allow = new Set(tagIds);
+    const out: Record<string, Note> = {};
+    for (const [id, n] of Object.entries(notes)) if (allow.has(id)) out[id] = n;
+    return out;
+  }, [notes, tagFilter, tagIds]);
+
   const tree = useMemo(
-    () => buildTree(Object.values(folders), Object.values(notes)),
-    [folders, notes],
+    () => buildTree(Object.values(folders), Object.values(filteredNotes)),
+    [folders, filteredNotes],
   );
 
   return (

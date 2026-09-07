@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import FileTree from "./features/filetree/FileTree";
 import Editor from "./features/editor/Editor";
 import BacklinksPanel from "./features/backlinks/BacklinksPanel";
+import TagPane from "./features/tags/TagPane";
 import { useVaultStore } from "./stores/useVaultStore";
 import { useUiStore } from "./stores/useUiStore";
 
@@ -33,7 +34,14 @@ export default function App() {
             {theme === "dark" ? "☀︎" : "☾"}
           </button>
         </div>
-        {loaded ? <FileTree /> : <div className="p-3 text-xs opacity-70">Loading…</div>}
+        {loaded ? (
+          <>
+            <TagPane />
+            <FileTree />
+          </>
+        ) : (
+          <div className="p-3 text-xs opacity-70">Loading…</div>
+        )}
       </aside>
       <main className="flex-1 overflow-hidden">
         {activeNote ? (

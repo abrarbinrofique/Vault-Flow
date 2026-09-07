@@ -7,8 +7,10 @@ type Theme = "light" | "dark";
 
 interface UiState {
   theme: Theme;
+  tagFilter: string | null;
   loadTheme: () => Promise<void>;
   toggleTheme: () => Promise<void>;
+  setTagFilter: (tag: string | null) => void;
 }
 
 function applyTheme(theme: Theme) {
@@ -17,6 +19,8 @@ function applyTheme(theme: Theme) {
 
 export const useUiStore = create<UiState>((set, get) => ({
   theme: "light",
+  tagFilter: null,
+  setTagFilter: (tag) => set({ tagFilter: tag }),
   loadTheme: async () => {
     const stored = (await getMeta<Theme>(THEME_KEY)) ?? "light";
     applyTheme(stored);

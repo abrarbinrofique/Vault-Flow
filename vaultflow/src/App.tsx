@@ -11,6 +11,7 @@ import Icon from "./components/Icon";
 import { useVaultStore } from "./stores/useVaultStore";
 import { useUiStore } from "./stores/useUiStore";
 import { openDailyNote } from "./features/dailynotes/openDailyNote";
+import { useIsMobile } from "./hooks/useMediaQuery";
 
 export default function App() {
   const loadAll = useVaultStore((s) => s.loadAll);
@@ -25,6 +26,7 @@ export default function App() {
   const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
 
+  const isMobile = useIsMobile();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [graphOpen, setGraphOpen] = useState(false);
 
@@ -32,6 +34,23 @@ export default function App() {
     void loadAll();
     void loadTheme();
   }, [loadAll, loadTheme]);
+
+  // On first mobile detection, collapse the sidebar so it stays hidden by default.
+  const [didAutoCollapse, setDidAutoCollapse] = useState(false);
+  useEffect(() => {
+    if (isMobile && !sidebarCollapsed && !didAutoCollapse) {
+      useUiStore.setState({ sidebarCollapsed: true });
+    }
+    if (isMobile) setDidAutoCollapse(true);
+  }, [isMobile, sidebarCollapsed, didAutoCollapse]);
+
+  // Auto-close sidebar overlay after picking a note on mobile.
+  useEffect(() => {
+    if (isMobile && activeNoteId && !sidebarCollapsed) {
+      useUiStore.setState({ sidebarCollapsed: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeNoteId, isMobile]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -48,11 +67,14 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [toggleSidebar]);
 
+  const sidebarOpen = !sidebarCollapsed;
+  const showSplit = !!splitNoteId && !isMobile;
+
   return (
-    <div className="flex h-screen">
+    <div className="vf-shell">
       {/* Icon rail */}
       <div
-        className="flex w-11 flex-col items-center justify-between border-r py-2"
+        className="vf-rail flex w-11 flex-col items-center justify-between border-r py-2"
         style={{
           background: "var(--vf-sidebar)",
           borderColor: "var(--vf-border)",
@@ -104,10 +126,20 @@ export default function App() {
         </button>
       </div>
 
+      {/* Backdrop for mobile overlay sidebar */}
+      {isMobile && (
+        <div
+          className="vf-backdrop"
+          data-open={sidebarOpen}
+          onClick={() => useUiStore.setState({ sidebarCollapsed: true })}
+        />
+      )}
+
       {/* Sidebar */}
-      {!sidebarCollapsed && (
+      {(sidebarOpen || isMobile) && (
         <aside
-          className="flex w-64 flex-col border-r"
+          className="vf-sidebar flex flex-col border-r"
+          data-open={sidebarOpen}
           style={{
             background: "var(--vf-sidebar)",
             borderColor: "var(--vf-border)",
@@ -149,16 +181,16 @@ export default function App() {
       )}
 
       {/* Main area */}
-      <main className="flex flex-1 overflow-hidden" style={{ background: "var(--vf-bg)" }}>
+      <main className="vf-main flex" style={{ background: "var(--vf-bg)" }}>
         {activeNoteId ? (
           <div
-            className={splitNoteId ? "flex flex-1 flex-col border-r" : "flex flex-1 flex-col"}
+            className={showSplit ? "flex flex-1 flex-col border-r" : "flex flex-1 flex-col"}
             style={{ borderColor: "var(--vf-border)" }}
           >
             <NotePane
               noteId={activeNoteId}
               actions={
-                !splitNoteId && (
+                !showSplit && !isMobile && (
                   <button
                     onClick={() => openSplit(activeNoteId)}
                     className="vf-icon-btn"
@@ -174,10 +206,10 @@ export default function App() {
         ) : (
           <EmptyState />
         )}
-        {splitNoteId && (
+        {showSplit && (
           <div className="flex flex-1 flex-col">
             <NotePane
-              noteId={splitNoteId}
+              noteId={splitNoteId!}
               actions={
                 <button
                   onClick={closeSplit}

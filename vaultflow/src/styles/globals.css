@@ -434,3 +434,66 @@ button {
 .vf-chevron.is-open {
   transform: rotate(90deg);
 }
+
+/* --------------------------------------------------------------------------
+ * Responsive — mobile drawer sidebar
+ * ------------------------------------------------------------------------ */
+.vf-shell {
+  display: flex;
+  height: 100vh;
+  height: 100dvh;
+}
+.vf-rail {
+  flex: 0 0 auto;
+  z-index: 30;
+}
+.vf-sidebar {
+  flex: 0 0 auto;
+  width: 260px;
+  transition: transform 220ms ease;
+  z-index: 40;
+}
+.vf-main {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+}
+.vf-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 35;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+@media (max-width: 767px) {
+  .vf-sidebar {
+    position: fixed;
+    top: 0;
+    left: 44px; /* space for the rail */
+    height: 100dvh;
+    width: min(280px, calc(100vw - 44px));
+    transform: translateX(-110%);
+    box-shadow: var(--vf-shadow-lg);
+  }
+  .vf-sidebar[data-open="true"] {
+    transform: translateX(0);
+  }
+  .vf-backdrop[data-open="true"] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  /* Editor content: reduce top padding + edge padding on phones */
+  .cm-editor .cm-content {
+    padding: 24px 16px 40vh;
+  }
+  .cm-editor {
+    font-size: 15px;
+  }
+  /* Headings scale down a hair */
+  .cm-editor .cm-md-heading-1 { font-size: 24px; }
+  .cm-editor .cm-md-heading-2 { font-size: 20px; }
+  .cm-editor .cm-md-heading-3 { font-size: 17px; }
+}

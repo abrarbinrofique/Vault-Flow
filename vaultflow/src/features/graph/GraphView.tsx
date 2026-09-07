@@ -357,7 +357,7 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
         )}
 
         <div
-          className="absolute bottom-4 right-4 flex flex-col overflow-hidden"
+          className="absolute top-4 right-4 flex flex-col overflow-hidden"
           style={{
             background: "var(--vf-surface)",
             border: "1px solid var(--vf-border)",

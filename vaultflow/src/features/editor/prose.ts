@@ -144,15 +144,35 @@ function buildDecorations(view: EditorView): DecorationSet {
           return;
         }
 
-        // Fenced code blocks: mono line + surface bar
+        // Fenced code blocks: mono line + surface bar; hide/dim ``` fences
         if (name === "FencedCode" || name === "CodeBlock") {
           const startLine = view.state.doc.lineAt(node.from).number;
           const endLine = view.state.doc.lineAt(node.to).number;
           for (let n = startLine; n <= endLine; n++) {
             const line = view.state.doc.line(n);
-            decos.push(
-              Decoration.line({ class: "cm-md-codeblock" }).range(line.from),
-            );
+            const cls =
+              n === startLine
+                ? "cm-md-codeblock cm-md-codeblock-first"
+                : n === endLine
+                  ? "cm-md-codeblock cm-md-codeblock-last"
+                  : "cm-md-codeblock";
+            decos.push(Decoration.line({ class: cls }).range(line.from));
+          }
+
+          if (name === "FencedCode") {
+            const c = node.node.cursor();
+            if (c.firstChild()) {
+              do {
+                if (c.name === "CodeMark" || c.name === "CodeInfo") {
+                  const markLine = view.state.doc.lineAt(c.from).number;
+                  if (activeLines.has(markLine)) {
+                    decos.push(DIM.range(c.from, c.to));
+                  } else {
+                    decos.push(HIDE.range(c.from, c.to));
+                  }
+                }
+              } while (c.nextSibling());
+            }
           }
           return;
         }

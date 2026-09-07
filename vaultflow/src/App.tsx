@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import FileTree from "./features/filetree/FileTree";
 import Editor from "./features/editor/Editor";
+import BacklinksPanel from "./features/backlinks/BacklinksPanel";
 import { useVaultStore } from "./stores/useVaultStore";
 import { useUiStore } from "./stores/useUiStore";
 
@@ -43,6 +44,7 @@ export default function App() {
             <div className="flex-1 overflow-hidden">
               <Editor noteId={activeNote.id} initialContent={activeNote.content} />
             </div>
+            <BacklinksPanel />
           </div>
         ) : (
           <div className="flex h-full items-center justify-center text-sm opacity-60">

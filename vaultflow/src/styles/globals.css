@@ -294,6 +294,17 @@ button {
   min-height: 1em;
 }
 
+/* Inline link hints: dashed underline suggesting a wikilink conversion */
+.cm-editor .cm-link-hint {
+  border-bottom: 1px dashed var(--vf-muted);
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+.cm-editor .cm-link-hint:hover {
+  color: var(--vf-accent);
+  border-bottom-color: var(--vf-accent);
+}
+
 /* Markdown links — accent, underline on hover (matching wikilinks) */
 .cm-editor .cm-md-link {
   color: var(--vf-accent);

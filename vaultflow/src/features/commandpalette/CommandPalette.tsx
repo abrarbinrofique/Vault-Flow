@@ -63,6 +63,7 @@ export default function CommandPalette({ open, onClose }: Props) {
     const q = debouncedQuery.trim();
     const out: Item[] = [];
 
+    const hintsOn = useUiStore.getState().linkHintsEnabled;
     const builtins: Item[] = [
       {
         kind: "command",
@@ -79,6 +80,16 @@ export default function CommandPalette({ open, onClose }: Props) {
         hint: "Command",
         icon: <Icon name="calendar" size={14} />,
         run: () => openDailyNote(),
+      },
+      {
+        kind: "command",
+        id: "cmd:toggle-linkhints",
+        label: hintsOn
+          ? "Turn off inline link hints"
+          : "Turn on inline link hints",
+        hint: hintsOn ? "On" : "Off",
+        icon: <Icon name="link" size={14} />,
+        run: () => useUiStore.getState().toggleLinkHints(),
       },
     ];
 

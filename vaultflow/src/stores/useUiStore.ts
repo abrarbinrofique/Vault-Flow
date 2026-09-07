@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { getMeta, setMeta } from "../storage/db";
 
 const THEME_KEY = "theme";
+const LINK_HINTS_KEY = "linkHintsEnabled";
 
 type Theme = "light" | "dark";
 
@@ -11,8 +12,10 @@ interface UiState {
   splitNoteId: string | null;
   sidebarCollapsed: boolean;
   quickCaptureOpen: boolean;
+  linkHintsEnabled: boolean;
   loadTheme: () => Promise<void>;
   toggleTheme: () => Promise<void>;
+  toggleLinkHints: () => Promise<void>;
   setTagFilter: (tag: string | null) => void;
   openSplit: (noteId: string) => void;
   closeSplit: () => void;
@@ -37,10 +40,17 @@ export const useUiStore = create<UiState>((set, get) => ({
   quickCaptureOpen: false,
   openQuickCapture: () => set({ quickCaptureOpen: true }),
   closeQuickCapture: () => set({ quickCaptureOpen: false }),
+  linkHintsEnabled: true,
+  toggleLinkHints: async () => {
+    const next = !get().linkHintsEnabled;
+    set({ linkHintsEnabled: next });
+    await setMeta(LINK_HINTS_KEY, next);
+  },
   loadTheme: async () => {
     const stored = (await getMeta<Theme>(THEME_KEY)) ?? "light";
     applyTheme(stored);
-    set({ theme: stored });
+    const hints = (await getMeta<boolean>(LINK_HINTS_KEY)) ?? true;
+    set({ theme: stored, linkHintsEnabled: hints });
   },
   toggleTheme: async () => {
     const next: Theme = get().theme === "dark" ? "light" : "dark";

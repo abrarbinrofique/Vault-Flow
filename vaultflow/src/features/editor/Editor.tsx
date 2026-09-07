@@ -12,6 +12,7 @@ import { wikilinkClick } from "./wikilinkClick";
 import { livePreview } from "./livePreview";
 import { proseStyling } from "./prose";
 import { codeCopyButtons } from "./codeCopy";
+import { linkHints } from "./linkHints";
 
 const baseExtensions = [
   history(),
@@ -19,6 +20,7 @@ const baseExtensions = [
   markdown({ extensions: [GFM] }),
   proseStyling(),
   codeCopyButtons(),
+  linkHints(),
   wikilinkAutocomplete(),
   wikilinkClick(),
   livePreview(),

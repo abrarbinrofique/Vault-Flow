@@ -51,6 +51,8 @@ interface VaultState {
   deleteNote: (id: string) => Promise<void>;
   updateNoteContent: (id: string, content: string) => Promise<void>;
 
+  moveNote: (id: string, newPath: string) => Promise<void>;
+
   createFolder: (name: string, parentPath?: string) => Promise<void>;
   renameFolder: (oldPath: string, newName: string) => Promise<void>;
   deleteFolder: (path: string) => Promise<void>;
@@ -155,6 +157,20 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       for (const r of rewritten) linkIndex = updateLinkIndex(linkIndex, r);
       return { notes, linkIndex };
     });
+  },
+
+  moveNote: async (id, newPath) => {
+    const note = get().notes[id];
+    if (!note) return;
+    if (note.path === newPath) return;
+    const updated: Note = { ...note, path: newPath, updatedAt: Date.now() };
+    await storage.writeFile(updated);
+    upsertSearch(searchIndex, updated);
+    mirrorWriteNote(updated, note);
+    set((s) => ({
+      notes: { ...s.notes, [id]: updated },
+      linkIndex: updateLinkIndex(s.linkIndex, updated),
+    }));
   },
 
   deleteNote: async (id) => {

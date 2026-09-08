@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useVaultStore } from "../../stores/useVaultStore";
 import { useUiStore } from "../../stores/useUiStore";
@@ -50,11 +50,14 @@ function useTreeActions() {
       createFolder: s.createFolder,
       renameNote: s.renameNote,
       deleteNote: s.deleteNote,
+      moveNote: s.moveNote,
       renameFolder: s.renameFolder,
       deleteFolder: s.deleteFolder,
     })),
   );
 }
+
+const DRAG_MIME = "application/x-vaultflow-note";
 
 function RowShell({
   depth,
@@ -62,33 +65,102 @@ function RowShell({
   onClick,
   children,
   menu,
+  draggable,
+  onDragStart,
+  onDragEnd,
+  dropTarget,
 }: {
   depth: number;
   active?: boolean;
   onClick?: () => void;
   children: React.ReactNode;
   menu?: React.ReactNode;
+  draggable?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
+  onDragEnd?: (e: React.DragEvent) => void;
+  /** If provided, accept notes being dropped and forward path/type. */
+  dropTarget?: { onDropNote: (noteId: string) => void };
 }) {
+  const [isOver, setIsOver] = useState(false);
+  const overRef = useRef(false);
+  overRef.current = isOver;
+
+  const canDrop = !!dropTarget;
+  const bg = isOver
+    ? "var(--vf-accent-soft)"
+    : active
+      ? "var(--vf-accent-soft)"
+      : "transparent";
+  const border = isOver
+    ? "2px solid var(--vf-accent)"
+    : active
+      ? "2px solid var(--vf-accent)"
+      : "2px solid transparent";
+
   return (
     <div
       className="group relative flex items-center pr-1"
       style={{
         height: 28,
         paddingLeft: 8 + depth * 12,
-        background: active ? "var(--vf-accent-soft)" : "transparent",
+        background: bg,
         color: active ? "var(--vf-fg)" : "var(--vf-fg-secondary)",
         cursor: onClick ? "pointer" : "default",
-        borderLeft: active
-          ? "2px solid var(--vf-accent)"
-          : "2px solid transparent",
+        borderLeft: border,
         transition: "background-color 120ms ease, color 120ms ease",
       }}
       onClick={onClick}
+      draggable={draggable}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onDragEnter={
+        canDrop
+          ? (e) => {
+              if (!e.dataTransfer.types.includes(DRAG_MIME)) return;
+              e.preventDefault();
+              setIsOver(true);
+            }
+          : undefined
+      }
+      onDragOver={
+        canDrop
+          ? (e) => {
+              if (!e.dataTransfer.types.includes(DRAG_MIME)) return;
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "move";
+              if (!overRef.current) setIsOver(true);
+            }
+          : undefined
+      }
+      onDragLeave={
+        canDrop
+          ? (e) => {
+              // Ignore leave events into descendants.
+              if (
+                e.currentTarget.contains(e.relatedTarget as Node | null)
+              )
+                return;
+              setIsOver(false);
+            }
+          : undefined
+      }
+      onDrop={
+        canDrop
+          ? (e) => {
+              const id = e.dataTransfer.getData(DRAG_MIME);
+              setIsOver(false);
+              if (!id) return;
+              e.preventDefault();
+              dropTarget!.onDropNote(id);
+            }
+          : undefined
+      }
       onMouseOver={(e) => {
-        if (!active) e.currentTarget.style.background = "var(--vf-surface-hover)";
+        if (!active && !isOver)
+          e.currentTarget.style.background = "var(--vf-surface-hover)";
       }}
       onMouseOut={(e) => {
-        if (!active) e.currentTarget.style.background = "transparent";
+        if (!active && !isOver) e.currentTarget.style.background = "transparent";
       }}
     >
       <div className="flex min-w-0 flex-1 items-center gap-1.5 text-[13px]">
@@ -184,6 +256,11 @@ function FolderRow({
     <RowShell
       depth={depth}
       onClick={onToggle}
+      dropTarget={{
+        onDropNote: (noteId) => {
+          void actions.moveNote(noteId, node.path);
+        },
+      }}
       menu={
         <KebabMenu
           items={[
@@ -264,6 +341,11 @@ function NoteRow({ note, depth }: { note: Note; depth: number }) {
       depth={depth}
       active={active}
       onClick={() => actions.setActiveNote(note.id)}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData(DRAG_MIME, note.id);
+      }}
       menu={
         <KebabMenu
           items={[
@@ -394,7 +476,7 @@ export default function FileTree() {
           Notes
         </span>
       </div>
-      <div className="flex-1 overflow-y-auto pb-2">
+      <RootDropZone>
         {empty ? (
           <div
             className="px-3 py-4 text-center text-[12px]"
@@ -410,7 +492,44 @@ export default function FileTree() {
             onToggleFolder={toggleFolder}
           />
         )}
-      </div>
+      </RootDropZone>
+    </div>
+  );
+}
+
+function RootDropZone({ children }: { children: React.ReactNode }) {
+  const moveNote = useVaultStore((s) => s.moveNote);
+  const [isOver, setIsOver] = useState(false);
+  return (
+    <div
+      className="flex-1 overflow-y-auto pb-2"
+      style={{
+        background: isOver ? "var(--vf-accent-soft)" : "transparent",
+        transition: "background-color 120ms ease",
+      }}
+      onDragEnter={(e) => {
+        if (!e.dataTransfer.types.includes(DRAG_MIME)) return;
+        e.preventDefault();
+        setIsOver(true);
+      }}
+      onDragOver={(e) => {
+        if (!e.dataTransfer.types.includes(DRAG_MIME)) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+      }}
+      onDragLeave={(e) => {
+        if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+        setIsOver(false);
+      }}
+      onDrop={(e) => {
+        const id = e.dataTransfer.getData(DRAG_MIME);
+        setIsOver(false);
+        if (!id) return;
+        e.preventDefault();
+        void moveNote(id, "");
+      }}
+    >
+      {children}
     </div>
   );
 }

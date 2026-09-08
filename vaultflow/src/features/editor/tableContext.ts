@@ -36,8 +36,13 @@ function findEnclosingTable(
 ): { from: number; to: number } | null {
   const tree = syntaxTree(state);
   const cursor = tree.cursorAt(pos, 1);
+  // Walk up; if we hit a code region first, this isn't a table context.
   while (cursor) {
-    if (cursor.name === "Table") {
+    const n = cursor.name;
+    if (n === "FencedCode" || n === "CodeBlock" || n === "InlineCode") {
+      return null;
+    }
+    if (n === "Table") {
       return { from: cursor.from, to: cursor.to };
     }
     if (!cursor.parent()) break;
@@ -54,6 +59,25 @@ function findTableByShape(
   state: EditorState,
   pos: number,
 ): { from: number; to: number } | null {
+  // Do not sniff shape inside code regions — pipes in code (e.g. `if (a | b)`)
+  // would otherwise get misidentified as a table row and swallow Enter/Tab.
+  const tree = syntaxTree(state);
+  const inCode = (): boolean => {
+    const c = tree.cursorAt(pos, 1);
+    while (c) {
+      if (
+        c.name === "FencedCode" ||
+        c.name === "CodeBlock" ||
+        c.name === "InlineCode"
+      ) {
+        return true;
+      }
+      if (!c.parent()) break;
+    }
+    return false;
+  };
+  if (inCode()) return null;
+
   const cursorLine = state.doc.lineAt(pos);
   const isRowShape = (n: number): boolean => {
     if (n < 1 || n > state.doc.lines) return false;

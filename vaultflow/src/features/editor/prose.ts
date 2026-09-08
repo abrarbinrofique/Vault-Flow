@@ -257,16 +257,14 @@ function buildDecorations(view: EditorView): DecorationSet {
           }
 
           if (name === "FencedCode") {
+            // Always DIM (never fully hide) the ``` fences and language tag —
+            // hiding an unclosed opening fence trapped users because they
+            // couldn't tell the block was still open.
             const c = node.node.cursor();
             if (c.firstChild()) {
               do {
                 if (c.name === "CodeMark" || c.name === "CodeInfo") {
-                  const markLine = view.state.doc.lineAt(c.from).number;
-                  if (activeLines.has(markLine)) {
-                    decos.push(DIM.range(c.from, c.to));
-                  } else {
-                    decos.push(HIDE.range(c.from, c.to));
-                  }
+                  decos.push(DIM.range(c.from, c.to));
                 }
               } while (c.nextSibling());
             }

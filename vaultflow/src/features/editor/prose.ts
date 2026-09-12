@@ -241,8 +241,17 @@ function buildDecorations(view: EditorView): DecorationSet {
           return;
         }
 
-        // Fenced code blocks: mono line + surface bar; hide/dim ``` fences
+        // Fenced code blocks: mono line + surface bar; hide/dim ``` fences.
+        // Skip sheet blocks — sheetBlockWidget owns their rendering with a
+        // block replace and any line/mark decorations here would conflict.
         if (name === "FencedCode" || name === "CodeBlock") {
+          if (name === "FencedCode") {
+            const info = node.node.getChild("CodeInfo");
+            if (info) {
+              const lang = view.state.sliceDoc(info.from, info.to).trim();
+              if (lang === "sheet") return;
+            }
+          }
           const startLine = view.state.doc.lineAt(node.from).number;
           const endLine = view.state.doc.lineAt(node.to).number;
           for (let n = startLine; n <= endLine; n++) {
@@ -257,9 +266,6 @@ function buildDecorations(view: EditorView): DecorationSet {
           }
 
           if (name === "FencedCode") {
-            // Always DIM (never fully hide) the ``` fences and language tag —
-            // hiding an unclosed opening fence trapped users because they
-            // couldn't tell the block was still open.
             const c = node.node.cursor();
             if (c.firstChild()) {
               do {

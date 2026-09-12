@@ -110,6 +110,24 @@ export default function CommandPalette({ open, onClose }: Props) {
       },
       {
         kind: "command",
+        id: "cmd:new-sheet",
+        label: "New sheet",
+        hint: "Command",
+        icon: <Icon name="grid" size={14} />,
+        run: async () => {
+          const t = await promptText({
+            title: "New sheet",
+            label: "Title",
+            submitLabel: "Create",
+          });
+          if (!t) return;
+          await useVaultStore
+            .getState()
+            .createNote({ title: t, kind: "sheet" });
+        },
+      },
+      {
+        kind: "command",
         id: "cmd:new-drawing",
         label: "New drawing",
         hint: "Command",

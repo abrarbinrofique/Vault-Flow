@@ -24,9 +24,10 @@ export function createSearchIndex(): MiniSearch<Note> {
 }
 
 function forIndex(note: Note): Note {
-  // Drawings store JSON scenes in content — indexing that produces noisy hits.
-  // Index the title only for drawings.
-  if (note.kind === "drawing") return { ...note, content: "" };
+  // Drawings and sheets store JSON in content — indexing that produces noisy
+  // hits. Index the title only for those kinds.
+  if (note.kind === "drawing" || note.kind === "sheet")
+    return { ...note, content: "" };
   return note;
 }
 

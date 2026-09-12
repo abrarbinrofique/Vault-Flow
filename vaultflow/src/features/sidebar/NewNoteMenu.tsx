@@ -27,6 +27,18 @@ export default function NewNoteMenu() {
         .getState()
         .createNote({ title: t, kind: "drawing" });
   };
+  const newSheet = async () => {
+    const t = await promptText({
+      title: "New sheet",
+      label: "Title",
+      placeholder: "e.g. Sales tracker",
+      submitLabel: "Create",
+    });
+    if (t)
+      await useVaultStore
+        .getState()
+        .createNote({ title: t, kind: "sheet" });
+  };
 
   return (
     <div className="relative">
@@ -83,6 +95,22 @@ export default function NewNoteMenu() {
               }
             >
               <Icon name="pen" size={13} /> New drawing
+            </button>
+            <button
+              onClick={() => {
+                setOpen(false);
+                void newSheet();
+              }}
+              className="flex w-full items-center gap-2 px-3 text-left text-[12.5px]"
+              style={{ height: 30, color: "var(--vf-fg-secondary)" }}
+              onMouseOver={(e) =>
+                (e.currentTarget.style.background = "var(--vf-surface-hover)")
+              }
+              onMouseOut={(e) =>
+                (e.currentTarget.style.background = "transparent")
+              }
+            >
+              <Icon name="grid" size={13} /> New sheet
             </button>
           </div>
         </>

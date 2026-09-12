@@ -56,8 +56,8 @@ function stripNote(prev: LinkIndex, noteId: string): LinkIndex {
 function applyNote(idx: LinkIndex, note: Note): void {
   // Templates are scaffolding, not knowledge — skip them from the link/tag graph.
   if (isTemplatePath(note.path)) return;
-  // Drawings don't contain wikilinks or tags — their content is JSON.
-  if (note.kind === "drawing") return;
+  // Drawings and sheets don't contain wikilinks or tags — their content is JSON.
+  if (note.kind === "drawing" || note.kind === "sheet") return;
   const links = parseWikilinks(note.content);
   const titles = links.map((l) => l.title);
   if (titles.length) idx.outbound[note.id] = titles;

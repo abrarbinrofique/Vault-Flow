@@ -21,7 +21,8 @@ type IconName =
   | "calendar"
   | "tag"
   | "link"
-  | "pen";
+  | "pen"
+  | "grid";
 
 const PATHS: Record<IconName, React.ReactNode> = {
   "chevron-right": <path d="M9 6l6 6-6 6" />,
@@ -121,6 +122,12 @@ const PATHS: Record<IconName, React.ReactNode> = {
       <path d="M12 20h9" />
       <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4z" />
       <path d="M14 6l4 4" />
+    </>
+  ),
+  grid: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M3 10h18M3 15h18M9 3v18M15 3v18" />
     </>
   ),
 };

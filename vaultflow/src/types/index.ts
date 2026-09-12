@@ -1,4 +1,4 @@
-export type NoteKind = "markdown" | "drawing";
+export type NoteKind = "markdown" | "drawing" | "sheet";
 
 export interface Note {
   id: string;

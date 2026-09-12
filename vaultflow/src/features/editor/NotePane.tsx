@@ -3,6 +3,7 @@ import Editor from "./Editor";
 import TableToolbar from "./TableToolbar";
 import { allEditors } from "./focusedEditor";
 import DrawingEditor from "../drawing/DrawingEditor";
+import SheetEditor from "../sheet/SheetEditor";
 import { useUiStore } from "../../stores/useUiStore";
 import BacklinksPanel from "../backlinks/BacklinksPanel";
 import UnlinkedMentions from "../backlinks/UnlinkedMentions";
@@ -22,6 +23,17 @@ function DrawingHost({ note }: { note: Note }) {
   const theme = useUiStore((s) => s.theme);
   return (
     <DrawingEditor
+      noteId={note.id}
+      initialContent={note.content}
+      theme={theme}
+    />
+  );
+}
+
+function SheetHost({ note }: { note: Note }) {
+  const theme = useUiStore((s) => s.theme);
+  return (
+    <SheetEditor
       noteId={note.id}
       initialContent={note.content}
       theme={theme}
@@ -242,6 +254,8 @@ export default function NotePane({ noteId, showBacklinks = true, actions }: Prop
       <div className="flex-1 overflow-hidden">
         {note.kind === "drawing" ? (
           <DrawingHost note={note} />
+        ) : note.kind === "sheet" ? (
+          <SheetHost note={note} />
         ) : (
           <>
             <Editor noteId={note.id} initialContent={note.content} />
@@ -249,7 +263,7 @@ export default function NotePane({ noteId, showBacklinks = true, actions }: Prop
           </>
         )}
       </div>
-      {showBacklinks && note.kind !== "drawing" && (
+      {showBacklinks && note.kind !== "drawing" && note.kind !== "sheet" && (
         <>
           <BacklinksPanel noteId={note.id} />
           <UnlinkedMentions noteId={note.id} />

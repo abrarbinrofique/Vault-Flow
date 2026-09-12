@@ -50,9 +50,12 @@ function findSheetBlocks(view: EditorView): BlockRange[] {
         const payloadFrom = openLine.to + 1 > node.to ? node.to : openLine.to + 1;
         const payloadTo = closeLine.from > payloadFrom ? closeLine.from - 1 : node.to;
         const payload = view.state.sliceDoc(payloadFrom, Math.max(payloadFrom, payloadTo));
+        // block: true replace ranges must span whole lines — include the
+        // trailing newline (if present) so CodeMirror recognises the range.
+        const blockTo = Math.min(doc.length, closeLine.to + 1);
         out.push({
           blockFrom: openLine.from,
-          blockTo: closeLine.to,
+          blockTo,
           payloadFrom,
           payloadTo,
           payload,
@@ -87,6 +90,9 @@ class SheetWidget extends WidgetType {
     const host = document.createElement("div");
     host.className = "cm-sheet-block";
     host.contentEditable = "false";
+    host.style.display = "block";
+    host.style.width = "100%";
+    host.style.margin = "8px 0";
     // Prevent CodeMirror from stealing focus / drag from the widget interior.
     host.addEventListener("mousedown", (e) => {
       e.stopPropagation();

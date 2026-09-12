@@ -23,25 +23,7 @@ import {
 import { promptText } from "../../components/dialog";
 
 // Lazy chunks — the grid + charts only load when a sheet note is opened.
-interface GridModule {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  DataGrid: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  renderTextEditor: any;
-}
-
-let gridModulePromise: Promise<GridModule> | null = null;
-function loadGrid(): Promise<GridModule> {
-  if (!gridModulePromise) {
-    gridModulePromise = (async () => {
-      const mod = await import("react-data-grid");
-      // @ts-expect-error - CSS side-effect import has no types
-      await import("react-data-grid/lib/styles.css");
-      return { DataGrid: mod.DataGrid, renderTextEditor: mod.renderTextEditor };
-    })();
-  }
-  return gridModulePromise;
-}
+import { loadGrid, type GridModule } from "./gridLoader";
 
 import { lazy } from "react";
 const ChartsLazy = lazy(() => import("./ChartsPane"));

@@ -14,6 +14,7 @@ import { proseStyling } from "./prose";
 import { codeCopyButtons } from "./codeCopy";
 import { linkHints } from "./linkHints";
 import { tableKeymap } from "./tableKeymap";
+import { sheetBlockWidget } from "./sheetBlock";
 import { takePendingCursor } from "./pendingCursor";
 import { registerEditor, unregisterEditor } from "./focusedEditor";
 
@@ -24,6 +25,7 @@ const baseExtensions = [
   markdown({ extensions: [GFM] }),
   proseStyling(),
   codeCopyButtons(),
+  sheetBlockWidget(),
   linkHints(),
   wikilinkAutocomplete(),
   wikilinkClick(),

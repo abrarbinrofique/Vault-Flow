@@ -9,7 +9,7 @@ import {
   promptAndCreateFromTemplate,
 } from "../templates/newFromTemplate";
 import { useSmartStore } from "../../stores/useSmartStore";
-import { insertTableAtCursor } from "../editor/insertTable";
+import { insertSheetAtCursor, insertTableAtCursor } from "../editor/insertTable";
 import { importLibraryFromPicker } from "../drawing/importLibrary";
 import { promptText } from "../../components/dialog";
 
@@ -146,8 +146,19 @@ export default function CommandPalette({ open, onClose }: Props) {
       },
       {
         kind: "command",
+        id: "cmd:insert-spreadsheet",
+        label: "Insert spreadsheet (Excel-style)",
+        hint: "Command",
+        icon: <Icon name="grid" size={14} />,
+        run: () => {
+          if (!insertSheetAtCursor())
+            window.alert("Focus an editor first, then run this command.");
+        },
+      },
+      {
+        kind: "command",
         id: "cmd:insert-table",
-        label: "Insert table",
+        label: "Insert markdown table (pipes)",
         hint: "Command",
         icon: <Icon name="more" size={14} />,
         run: () => {

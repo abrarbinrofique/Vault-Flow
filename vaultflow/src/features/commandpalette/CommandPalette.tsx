@@ -150,9 +150,9 @@ export default function CommandPalette({ open, onClose }: Props) {
         label: "Insert spreadsheet (Excel-style)",
         hint: "Command",
         icon: <Icon name="grid" size={14} />,
-        run: () => {
-          if (!insertSheetAtCursor())
-            window.alert("Focus an editor first, then run this command.");
+        run: async () => {
+          const ok = await insertSheetAtCursor();
+          if (!ok) window.alert("Could not insert here — try a markdown note.");
         },
       },
       {
@@ -161,9 +161,9 @@ export default function CommandPalette({ open, onClose }: Props) {
         label: "Insert markdown table (pipes)",
         hint: "Command",
         icon: <Icon name="more" size={14} />,
-        run: () => {
-          if (!insertTableAtCursor())
-            window.alert("Focus an editor first, then run this command.");
+        run: async () => {
+          const ok = await insertTableAtCursor();
+          if (!ok) window.alert("Could not insert here — try a markdown note.");
         },
       },
       ...listTemplates().map<Item>((tpl) => ({

@@ -149,9 +149,11 @@ function buildDecorations(view: EditorView): DecorationSet {
   const blocks = findSheetBlocks(view);
   for (const b of blocks) {
     // Skip if any selection is inside this block — user is editing the raw
-    // markdown, don't replace it while they type.
+    // markdown, don't replace it while they type. Use strict < on the upper
+    // bound: cursor exactly at blockTo means it's already on the line AFTER
+    // the block (or at doc end), so the widget should render.
     const inside = view.state.selection.ranges.some(
-      (r) => r.from >= b.blockFrom && r.head <= b.blockTo,
+      (r) => r.from >= b.blockFrom && r.head < b.blockTo,
     );
     if (inside) continue;
     decos.push(

@@ -284,9 +284,9 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
         forceCollide((node: unknown) => {
           const n = node as { name?: string };
           const label = (n.name ?? "").length;
-          // Radius roughly = node circle + rendered label width. Labels are
-          // ~4.5px per char at the new smaller font size.
-          return 24 + label * 4.5;
+          // Overview mode hides labels, so we mostly reserve space for the
+          // node circles themselves plus a bit of breathing room.
+          return 14 + label * 1.6;
         })
           .strength(1)
           .iterations(3),
@@ -453,14 +453,18 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
                 ctx.stroke();
               }
 
-              // Label
+              // Label — only when zoomed in enough to read comfortably, OR
+              // always for the hovered / active node. Font size is fixed in
+              // WORLD coordinates so labels scale naturally with zoom
+              // instead of ballooning at low zoom.
               const isFocus = isHover || isActive;
-              if (globalScale > 0.7 || isFocus) {
-                const fontSize = Math.max(8, 9 / globalScale);
+              const showLabel = isFocus || globalScale >= 2;
+              if (showLabel) {
+                const fontSize = isFocus ? 4 : 3.5;
                 ctx.font = `${isFocus ? 600 : 400} ${fontSize}px ui-sans-serif, system-ui, -apple-system`;
                 ctx.fillStyle = isDimmed ? chrome.labelDim : chrome.label;
                 ctx.textBaseline = "middle";
-                ctx.fillText(n.name, n.x + r + 3, n.y);
+                ctx.fillText(n.name, n.x + r + 2, n.y);
               }
 
               // Fade-in newly appeared nodes during timeline playback.

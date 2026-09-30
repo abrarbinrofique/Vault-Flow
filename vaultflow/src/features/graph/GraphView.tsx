@@ -311,8 +311,13 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
         forceCollide((node: unknown) => {
           const n = node as { name?: string };
           const label = (n.name ?? "").length;
-          // Reserve node circle + label width + a small gap.
-          return 14 + label * 2.4;
+          // Label sits BELOW the node now, so reserve either half the
+          // label's horizontal width (so left/right neighbours don't
+          // collide with it) or the vertical stack height (node radius +
+          // label height + gap) — whichever is bigger.
+          const halfWidth = (label * 2.6) / 2 + 3;
+          const stackHeight = 10 + 6;
+          return Math.max(halfWidth, stackHeight);
         })
           .strength(1)
           .iterations(3),
@@ -479,14 +484,28 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
                 ctx.stroke();
               }
 
-              // Labels always shown, sized in WORLD coordinates so they
-              // scale naturally with zoom.
+              // Label centered below the node (world coords). Below-alignment
+              // means neighbouring nodes to the left/right don't get overrun.
+              // A soft outline in the background color gives the text
+              // contrast against connecting edges without a solid pill.
               const isFocus = isHover || isActive;
-              const fontSize = isFocus ? 4.5 : 4;
-              ctx.font = `${isFocus ? 600 : 400} ${fontSize}px ui-sans-serif, system-ui, -apple-system`;
+              const fontSize = isFocus ? 5 : 4.5;
+              ctx.font = `${isFocus ? 600 : 500} ${fontSize}px ui-sans-serif, system-ui, -apple-system`;
+              ctx.textAlign = "center";
+              ctx.textBaseline = "top";
+              const labelY = n.y + r + 3;
+              // Contrast outline
+              ctx.lineWidth = 2.4 / globalScale;
+              ctx.strokeStyle =
+                theme === "dark"
+                  ? "rgba(16,17,21,0.9)"
+                  : "rgba(255,255,255,0.95)";
+              ctx.strokeText(n.name, n.x, labelY);
               ctx.fillStyle = isDimmed ? chrome.labelDim : chrome.label;
-              ctx.textBaseline = "middle";
-              ctx.fillText(n.name, n.x + r + 2, n.y);
+              ctx.fillText(n.name, n.x, labelY);
+              // Restore alignment defaults for later draws.
+              ctx.textAlign = "left";
+              ctx.textBaseline = "alphabetic";
 
               // Fade-in newly appeared nodes during timeline playback.
               if (timelineOn) {

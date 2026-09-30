@@ -273,20 +273,20 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
     const fg = fgRef.current;
     if (!fg || data.nodes.length === 0) return;
     // Repulsion — very strong so the graph spreads across the canvas.
-    const charge = -1600 - Math.min(1600, data.nodes.length * 25);
-    fg.d3Force("charge")?.strength(charge).distanceMax(1500);
+    const charge = -2400 - Math.min(2400, data.nodes.length * 40);
+    fg.d3Force("charge")?.strength(charge).distanceMax(2000);
     // Long link rest length so connected nodes sit far apart.
-    fg.d3Force("link")?.distance(280).strength(0.22);
-    // Collision — radius accounts for node circle + label width so labels
-    // of one node never overlap another node or its label.
+    fg.d3Force("link")?.distance(380).strength(0.18);
+    // Collision — big radius around each node (label + generous gap) so
+    // nothing crowds anything else.
     import("d3-force").then(({ forceCollide }) => {
       fg.d3Force(
         "collide",
         forceCollide((node: unknown) => {
           const n = node as { name?: string };
           const label = (n.name ?? "").length;
-          // Node radius (~10) + label width in world px (~2.4/char) + gap.
-          return 16 + label * 2.6;
+          // Reserve node radius + label width + extra breathing room.
+          return 26 + label * 3;
         })
           .strength(1)
           .iterations(3),
@@ -294,7 +294,7 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
       fg.d3ReheatSimulation();
     });
     // Zoom to fit at a reasonable padding after layout settles.
-    const t = setTimeout(() => fgRef.current?.zoomToFit(800, 120), 2000);
+    const t = setTimeout(() => fgRef.current?.zoomToFit(800, 140), 2000);
     return () => clearTimeout(t);
   }, [data.nodes.length]);
 
@@ -316,7 +316,7 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
   }, [mode]);
 
   const radiusFor = (deg: number, active: boolean) =>
-    (active ? 6 : 4.5) + Math.min(4, Math.sqrt(deg) * 1);
+    (active ? 4.5 : 3) + Math.min(3, Math.sqrt(deg) * 0.8);
 
   // Legend groups: top-level folders by size + Daily + Root + Active.
   const legend = useMemo(() => {

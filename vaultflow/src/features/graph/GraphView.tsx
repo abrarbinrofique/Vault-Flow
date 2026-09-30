@@ -273,28 +273,28 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
     const fg = fgRef.current;
     if (!fg || data.nodes.length === 0) return;
     // Repulsion — very strong so the graph spreads across the canvas.
-    const charge = -1400 - Math.min(1200, data.nodes.length * 22);
-    fg.d3Force("charge")?.strength(charge).distanceMax(1200);
+    const charge = -1600 - Math.min(1600, data.nodes.length * 25);
+    fg.d3Force("charge")?.strength(charge).distanceMax(1500);
     // Long link rest length so connected nodes sit far apart.
-    fg.d3Force("link")?.distance(260).strength(0.25);
-    // Collision — big radius that accounts for the label so nothing overlaps.
+    fg.d3Force("link")?.distance(280).strength(0.22);
+    // Collision — radius accounts for node circle + label width so labels
+    // of one node never overlap another node or its label.
     import("d3-force").then(({ forceCollide }) => {
       fg.d3Force(
         "collide",
         forceCollide((node: unknown) => {
           const n = node as { name?: string };
           const label = (n.name ?? "").length;
-          // Overview mode hides labels, so we mostly reserve space for the
-          // node circles themselves plus a bit of breathing room.
-          return 14 + label * 1.6;
+          // Node radius (~10) + label width in world px (~2.4/char) + gap.
+          return 16 + label * 2.6;
         })
           .strength(1)
           .iterations(3),
       );
       fg.d3ReheatSimulation();
     });
-    // Give the simulation extra time to settle before framing.
-    const t = setTimeout(() => fgRef.current?.zoomToFit(800, 200), 2200);
+    // Zoom to fit at a reasonable padding after layout settles.
+    const t = setTimeout(() => fgRef.current?.zoomToFit(800, 120), 2000);
     return () => clearTimeout(t);
   }, [data.nodes.length]);
 
@@ -316,7 +316,7 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
   }, [mode]);
 
   const radiusFor = (deg: number, active: boolean) =>
-    (active ? 3 : 2) + Math.min(4, Math.sqrt(deg) * 0.9);
+    (active ? 6 : 4.5) + Math.min(4, Math.sqrt(deg) * 1);
 
   // Legend groups: top-level folders by size + Daily + Root + Active.
   const legend = useMemo(() => {
@@ -453,19 +453,14 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
                 ctx.stroke();
               }
 
-              // Label — only when zoomed in enough to read comfortably, OR
-              // always for the hovered / active node. Font size is fixed in
-              // WORLD coordinates so labels scale naturally with zoom
-              // instead of ballooning at low zoom.
+              // Labels always shown, sized in WORLD coordinates so they
+              // scale naturally with zoom.
               const isFocus = isHover || isActive;
-              const showLabel = isFocus || globalScale >= 2;
-              if (showLabel) {
-                const fontSize = isFocus ? 4 : 3.5;
-                ctx.font = `${isFocus ? 600 : 400} ${fontSize}px ui-sans-serif, system-ui, -apple-system`;
-                ctx.fillStyle = isDimmed ? chrome.labelDim : chrome.label;
-                ctx.textBaseline = "middle";
-                ctx.fillText(n.name, n.x + r + 2, n.y);
-              }
+              const fontSize = isFocus ? 4.5 : 4;
+              ctx.font = `${isFocus ? 600 : 400} ${fontSize}px ui-sans-serif, system-ui, -apple-system`;
+              ctx.fillStyle = isDimmed ? chrome.labelDim : chrome.label;
+              ctx.textBaseline = "middle";
+              ctx.fillText(n.name, n.x + r + 2, n.y);
 
               // Fade-in newly appeared nodes during timeline playback.
               if (timelineOn) {

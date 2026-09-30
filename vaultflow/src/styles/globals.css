@@ -650,11 +650,22 @@ button {
     left: 44px; /* space for the rail */
     height: 100dvh;
     width: min(280px, calc(100vw - 44px));
-    transform: translateX(-110%);
+    /* Push the entire drawer off-screen INCLUDING past its own left
+       offset — previously translateX(-110%) still left a ~16px sliver
+       of the right edge visible next to the icon rail. */
+    transform: translateX(calc(-100% - 44px));
     box-shadow: var(--vf-shadow-lg);
+    visibility: hidden;
+    transition:
+      transform 220ms ease,
+      visibility 0s linear 220ms;
   }
   .vf-sidebar[data-open="true"] {
     transform: translateX(0);
+    visibility: visible;
+    transition:
+      transform 220ms ease,
+      visibility 0s;
   }
   .vf-backdrop[data-open="true"] {
     opacity: 1;

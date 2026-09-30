@@ -272,25 +272,29 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const fg = fgRef.current;
     if (!fg || data.nodes.length === 0) return;
-    // Repulsion — stronger negative = more space. Scales gently with node count.
-    const charge = -180 - Math.min(200, data.nodes.length * 4);
-    fg.d3Force("charge")?.strength(charge);
-    // Link length — how far connected nodes rest apart.
-    fg.d3Force("link")?.distance(90).strength(0.6);
-    // Collision — prevents node circles + labels from overlapping.
+    // Repulsion — much stronger to push clusters apart.
+    const charge = -600 - Math.min(600, data.nodes.length * 12);
+    fg.d3Force("charge")?.strength(charge).distanceMax(600);
+    // Long link rest length so connected nodes still breathe.
+    fg.d3Force("link")?.distance(160).strength(0.4);
+    // Collision — radius accounts for the label width so circles + text
+    // never overlap.
     import("d3-force").then(({ forceCollide }) => {
-      // Rough per-node radius including the label estimate (name.length chars).
       fg.d3Force(
         "collide",
         forceCollide((node: unknown) => {
           const n = node as { name?: string };
           const label = (n.name ?? "").length;
-          return 22 + Math.min(48, label * 3.2);
-        }).strength(0.9),
+          // ~4px per char roughly matches the rendered label width.
+          return 40 + label * 4;
+        })
+          .strength(1)
+          .iterations(2),
       );
       fg.d3ReheatSimulation();
     });
-    const t = setTimeout(() => fgRef.current?.zoomToFit(700, 120), 700);
+    // Let the simulation settle before framing.
+    const t = setTimeout(() => fgRef.current?.zoomToFit(700, 160), 1500);
     return () => clearTimeout(t);
   }, [data.nodes.length]);
 

@@ -626,6 +626,24 @@ button {
 }
 
 @media (max-width: 767px) {
+  html,
+  body,
+  #root {
+    /* Use dynamic viewport height so the collapsing browser chrome
+       (Safari address bar, Chrome nav bar) doesn't create dead space. */
+    height: 100dvh;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    /* Respect the iOS notch / Dynamic Island. */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+      env(safe-area-inset-bottom) env(safe-area-inset-left);
+    box-sizing: border-box;
+  }
+  .vf-shell {
+    height: 100dvh;
+  }
   .vf-sidebar {
     position: fixed;
     top: 0;
@@ -642,15 +660,37 @@ button {
     opacity: 1;
     pointer-events: auto;
   }
-  /* Editor content: reduce top padding + edge padding on phones */
+  /* Editor content: reduce edge padding on phones. Keep font >= 16px so
+     iOS Safari doesn't auto-zoom when the caret enters an input. */
   .cm-editor .cm-content {
-    padding: 24px 16px 40vh;
+    padding: 20px 14px 40vh;
   }
   .cm-editor {
-    font-size: 15px;
+    font-size: 16px;
   }
-  /* Headings scale down a hair */
   .cm-editor .cm-md-heading-1 { font-size: 24px; }
   .cm-editor .cm-md-heading-2 { font-size: 20px; }
   .cm-editor .cm-md-heading-3 { font-size: 17px; }
+
+  /* Prevent iOS Safari zoom-on-focus for text inputs / textareas. */
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  input[type="url"],
+  input[type="password"],
+  input[type="number"],
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Keep the main content pane from being scrolled-inside horizontally
+     when a wide widget (drawing, graph, grid) is mounted. */
+  .vf-main {
+    overflow-x: hidden;
+  }
+
+  /* Tighten command palette + dialog sizing on tiny screens. */
+  .vf-panel {
+    max-width: 96vw;
+  }
 }

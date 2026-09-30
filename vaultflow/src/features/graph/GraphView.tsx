@@ -272,29 +272,28 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const fg = fgRef.current;
     if (!fg || data.nodes.length === 0) return;
-    // Repulsion — much stronger to push clusters apart.
-    const charge = -600 - Math.min(600, data.nodes.length * 12);
-    fg.d3Force("charge")?.strength(charge).distanceMax(600);
-    // Long link rest length so connected nodes still breathe.
-    fg.d3Force("link")?.distance(160).strength(0.4);
-    // Collision — radius accounts for the label width so circles + text
-    // never overlap.
+    // Repulsion — very strong so the graph spreads across the canvas.
+    const charge = -1400 - Math.min(1200, data.nodes.length * 22);
+    fg.d3Force("charge")?.strength(charge).distanceMax(1200);
+    // Long link rest length so connected nodes sit far apart.
+    fg.d3Force("link")?.distance(260).strength(0.25);
+    // Collision — big radius that accounts for the label so nothing overlaps.
     import("d3-force").then(({ forceCollide }) => {
       fg.d3Force(
         "collide",
         forceCollide((node: unknown) => {
           const n = node as { name?: string };
           const label = (n.name ?? "").length;
-          // ~4px per char roughly matches the rendered label width.
-          return 40 + label * 4;
+          // Bigger radius = more empty space between nodes.
+          return 70 + label * 5.5;
         })
           .strength(1)
-          .iterations(2),
+          .iterations(3),
       );
       fg.d3ReheatSimulation();
     });
-    // Let the simulation settle before framing.
-    const t = setTimeout(() => fgRef.current?.zoomToFit(700, 160), 1500);
+    // Give the simulation extra time to settle before framing.
+    const t = setTimeout(() => fgRef.current?.zoomToFit(800, 200), 2200);
     return () => clearTimeout(t);
   }, [data.nodes.length]);
 
@@ -316,7 +315,7 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
   }, [mode]);
 
   const radiusFor = (deg: number, active: boolean) =>
-    (active ? 5 : 3.5) + Math.min(6, Math.sqrt(deg) * 1.6);
+    (active ? 3 : 2) + Math.min(4, Math.sqrt(deg) * 0.9);
 
   // Legend groups: top-level folders by size + Daily + Root + Active.
   const legend = useMemo(() => {

@@ -63,11 +63,23 @@ export default function FolderStatus() {
     if (status === "connected") {
       const ok = await confirmDialog({
         title: "Disconnect local folder?",
-        message: "Notes stay in the browser (IndexedDB). You can reconnect at any time.",
+        message: "The vault will stop syncing with your folder. Files on disk stay untouched.",
         confirmLabel: "Disconnect",
       });
       if (!ok) return;
       await disconnectFolder();
+
+      const noteCount = Object.keys(useVaultStore.getState().notes).length;
+      if (noteCount > 0) {
+        const alsoWipe = await confirmDialog({
+          title: "Also remove notes from browser?",
+          message: `${noteCount} note${noteCount === 1 ? "" : "s"} still live in the browser (IndexedDB). Remove them too? Files on disk are NOT affected.`,
+          confirmLabel: "Remove from browser",
+          cancelLabel: "Keep in browser",
+          danger: true,
+        });
+        if (alsoWipe) await clearVault();
+      }
       return;
     }
     if (status === "denied") {

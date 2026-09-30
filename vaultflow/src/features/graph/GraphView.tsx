@@ -61,6 +61,9 @@ interface FGRef {
   zoomToFit: (ms: number, padding: number) => void;
   zoom: (factor?: number, ms?: number) => number | void;
   centerAt: (x?: number, y?: number, ms?: number) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  d3Force: (name: string, force?: any) => any;
+  d3ReheatSimulation: () => void;
 }
 
 function readCssVar(name: string): string {
@@ -263,9 +266,31 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
     return m;
   }, [data]);
 
+  // Tune the d3-force simulation so labeled nodes spread out and don't overlap.
+  // Runs on mount and whenever the node count changes so newly added nodes
+  // get pushed apart too.
   useEffect(() => {
-    if (!fgRef.current || data.nodes.length === 0) return;
-    const t = setTimeout(() => fgRef.current?.zoomToFit(600, 80), 350);
+    const fg = fgRef.current;
+    if (!fg || data.nodes.length === 0) return;
+    // Repulsion — stronger negative = more space. Scales gently with node count.
+    const charge = -180 - Math.min(200, data.nodes.length * 4);
+    fg.d3Force("charge")?.strength(charge);
+    // Link length — how far connected nodes rest apart.
+    fg.d3Force("link")?.distance(90).strength(0.6);
+    // Collision — prevents node circles + labels from overlapping.
+    import("d3-force").then(({ forceCollide }) => {
+      // Rough per-node radius including the label estimate (name.length chars).
+      fg.d3Force(
+        "collide",
+        forceCollide((node: unknown) => {
+          const n = node as { name?: string };
+          const label = (n.name ?? "").length;
+          return 22 + Math.min(48, label * 3.2);
+        }).strength(0.9),
+      );
+      fg.d3ReheatSimulation();
+    });
+    const t = setTimeout(() => fgRef.current?.zoomToFit(700, 120), 700);
     return () => clearTimeout(t);
   }, [data.nodes.length]);
 

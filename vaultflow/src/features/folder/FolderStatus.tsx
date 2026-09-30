@@ -16,6 +16,7 @@ export default function FolderStatus() {
   const [status, setStatus] = useState<Status>("disconnected");
   const [error, setError] = useState<string | null>(null);
   const importFromFolder = useVaultStore((s) => s.importFromFolder);
+  const clearVault = useVaultStore((s) => s.clearVault);
   const loadAll = useVaultStore((s) => s.loadAll);
 
   useEffect(() => {
@@ -74,11 +75,30 @@ export default function FolderStatus() {
       return;
     }
     const imported = await connectFolder();
-    if (imported) {
-      await importFromFolder(imported);
-      await loadAll();
-      if (error) window.alert(error);
+    if (!imported) return;
+
+    // If there are existing notes in the browser vault, ask whether to
+    // REPLACE (wipe first, then import) or MERGE (keep both).
+    const existingCount = Object.keys(
+      useVaultStore.getState().notes,
+    ).length;
+    let shouldReplace = false;
+    if (existingCount > 0) {
+      shouldReplace = await confirmDialog({
+        title: "Replace or merge?",
+        message: `You have ${existingCount} note${existingCount === 1 ? "" : "s"} already in the browser. Replace them with the ${imported.length} file${imported.length === 1 ? "" : "s"} from this folder, or merge (keep both)?`,
+        confirmLabel: "Replace",
+        cancelLabel: "Merge",
+        danger: true,
+      });
     }
+
+    if (shouldReplace) {
+      await clearVault();
+    }
+    await importFromFolder(imported);
+    await loadAll();
+    if (error) window.alert(error);
   };
 
   return (

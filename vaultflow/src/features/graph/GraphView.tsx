@@ -284,8 +284,9 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
         forceCollide((node: unknown) => {
           const n = node as { name?: string };
           const label = (n.name ?? "").length;
-          // Bigger radius = more empty space between nodes.
-          return 70 + label * 5.5;
+          // Radius roughly = node circle + rendered label width. Labels are
+          // ~4.5px per char at the new smaller font size.
+          return 24 + label * 4.5;
         })
           .strength(1)
           .iterations(3),
@@ -455,11 +456,11 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
               // Label
               const isFocus = isHover || isActive;
               if (globalScale > 0.7 || isFocus) {
-                const fontSize = Math.max(11, 12 / globalScale);
+                const fontSize = Math.max(8, 9 / globalScale);
                 ctx.font = `${isFocus ? 600 : 400} ${fontSize}px ui-sans-serif, system-ui, -apple-system`;
                 ctx.fillStyle = isDimmed ? chrome.labelDim : chrome.label;
                 ctx.textBaseline = "middle";
-                ctx.fillText(n.name, n.x + r + 4, n.y);
+                ctx.fillText(n.name, n.x + r + 3, n.y);
               }
 
               // Fade-in newly appeared nodes during timeline playback.

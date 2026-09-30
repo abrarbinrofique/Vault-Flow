@@ -272,29 +272,55 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const fg = fgRef.current;
     if (!fg || data.nodes.length === 0) return;
-    // Repulsion — very strong so the graph spreads across the canvas.
-    const charge = -2400 - Math.min(2400, data.nodes.length * 40);
-    fg.d3Force("charge")?.strength(charge).distanceMax(2000);
-    // Long link rest length so connected nodes sit far apart.
-    fg.d3Force("link")?.distance(380).strength(0.18);
-    // Collision — big radius around each node (label + generous gap) so
-    // nothing crowds anything else.
-    import("d3-force").then(({ forceCollide }) => {
+    // Repulsion — very strong so nodes push each other apart everywhere.
+    const charge = -3000 - Math.min(3000, data.nodes.length * 50);
+    fg.d3Force("charge")?.strength(charge).distanceMax(2400);
+    // Long slack link — connected nodes stay far apart.
+    fg.d3Force("link")?.distance(460).strength(0.15);
+
+    // Cluster pattern: pull each top-level folder toward its own anchor
+    // point placed evenly around a large ring. Root notes cluster at origin,
+    // Daily gets its own slot. Produces a distinct constellation shape
+    // rather than a random blob.
+    const groups = new Map<string, { cx: number; cy: number }>();
+    const distinct = new Set<string>();
+    for (const n of data.nodes) distinct.add(n.group || "__root__");
+    const groupList = [...distinct].sort();
+    const R = 700 + groupList.length * 40;
+    groupList.forEach((g, i) => {
+      if (g === "__root__") {
+        groups.set(g, { cx: 0, cy: 0 });
+      } else {
+        const theta = (i / groupList.length) * Math.PI * 2;
+        groups.set(g, { cx: Math.cos(theta) * R, cy: Math.sin(theta) * R });
+      }
+    });
+
+    import("d3-force").then(({ forceCollide, forceX, forceY }) => {
+      const gx = forceX<(typeof data.nodes)[number]>((n) => {
+        const key = n.group || "__root__";
+        return groups.get(key)?.cx ?? 0;
+      }).strength(0.12);
+      const gy = forceY<(typeof data.nodes)[number]>((n) => {
+        const key = n.group || "__root__";
+        return groups.get(key)?.cy ?? 0;
+      }).strength(0.12);
+      fg.d3Force("groupX", gx);
+      fg.d3Force("groupY", gy);
       fg.d3Force(
         "collide",
         forceCollide((node: unknown) => {
           const n = node as { name?: string };
           const label = (n.name ?? "").length;
-          // Reserve node radius + label width + extra breathing room.
-          return 26 + label * 3;
+          return 30 + label * 3.4;
         })
           .strength(1)
           .iterations(3),
       );
       fg.d3ReheatSimulation();
     });
-    // Zoom to fit at a reasonable padding after layout settles.
-    const t = setTimeout(() => fgRef.current?.zoomToFit(800, 140), 2000);
+    // Zoom to fit after layout settles.
+    const t = setTimeout(() => fgRef.current?.zoomToFit(900, 160), 2400);
     return () => clearTimeout(t);
   }, [data.nodes.length]);
 

@@ -272,21 +272,20 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const fg = fgRef.current;
     if (!fg || data.nodes.length === 0) return;
-    // Repulsion — very strong so nodes push each other apart everywhere.
-    const charge = -3000 - Math.min(3000, data.nodes.length * 50);
-    fg.d3Force("charge")?.strength(charge).distanceMax(2400);
-    // Long slack link — connected nodes stay far apart.
-    fg.d3Force("link")?.distance(460).strength(0.15);
+    // Repulsion — moderate. Big enough to prevent overlap, small enough
+    // that the whole graph fits at a comfortable zoom level.
+    const charge = -700 - Math.min(700, data.nodes.length * 10);
+    fg.d3Force("charge")?.strength(charge).distanceMax(700);
+    // Link rest length — enough slack for label + a small gap.
+    fg.d3Force("link")?.distance(150).strength(0.25);
 
-    // Cluster pattern: pull each top-level folder toward its own anchor
-    // point placed evenly around a large ring. Root notes cluster at origin,
-    // Daily gets its own slot. Produces a distinct constellation shape
-    // rather than a random blob.
+    // Cluster pattern — pull each top-level folder toward its own anchor
+    // point placed evenly around a small ring. Produces a constellation.
     const groups = new Map<string, { cx: number; cy: number }>();
     const distinct = new Set<string>();
     for (const n of data.nodes) distinct.add(n.group || "__root__");
     const groupList = [...distinct].sort();
-    const R = 700 + groupList.length * 40;
+    const R = 240 + groupList.length * 16;
     groupList.forEach((g, i) => {
       if (g === "__root__") {
         groups.set(g, { cx: 0, cy: 0 });
@@ -300,11 +299,11 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
       const gx = forceX<(typeof data.nodes)[number]>((n) => {
         const key = n.group || "__root__";
         return groups.get(key)?.cx ?? 0;
-      }).strength(0.12);
+      }).strength(0.15);
       const gy = forceY<(typeof data.nodes)[number]>((n) => {
         const key = n.group || "__root__";
         return groups.get(key)?.cy ?? 0;
-      }).strength(0.12);
+      }).strength(0.15);
       fg.d3Force("groupX", gx);
       fg.d3Force("groupY", gy);
       fg.d3Force(
@@ -312,15 +311,16 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
         forceCollide((node: unknown) => {
           const n = node as { name?: string };
           const label = (n.name ?? "").length;
-          return 30 + label * 3.4;
+          // Reserve node circle + label width + a small gap.
+          return 14 + label * 2.4;
         })
           .strength(1)
           .iterations(3),
       );
       fg.d3ReheatSimulation();
     });
-    // Zoom to fit after layout settles.
-    const t = setTimeout(() => fgRef.current?.zoomToFit(900, 160), 2400);
+    // Zoom to fit at tighter padding so the graph fills the viewport.
+    const t = setTimeout(() => fgRef.current?.zoomToFit(800, 60), 2200);
     return () => clearTimeout(t);
   }, [data.nodes.length]);
 

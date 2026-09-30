@@ -311,16 +311,21 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
         forceCollide((node: unknown) => {
           const n = node as { name?: string };
           const label = (n.name ?? "").length;
-          // Label sits BELOW the node now, so reserve either half the
-          // label's horizontal width (so left/right neighbours don't
-          // collide with it) or the vertical stack height (node radius +
-          // label height + gap) — whichever is bigger.
-          const halfWidth = (label * 2.6) / 2 + 3;
-          const stackHeight = 10 + 6;
-          return Math.max(halfWidth, stackHeight);
+          // Bold labels are noticeably wider than the plain estimate, and
+          // labels sit BELOW the node — we want two guarantees:
+          //   1. Horizontal: two neighbours side-by-side cannot have their
+          //      labels overlap → radius >= halfLabelWidth + margin.
+          //   2. Diagonal / stack: a node stacked directly below another
+          //      cannot overrun the label above → radius >= nodeR + labelH
+          //      + gap.
+          // Use a bounding-radius that satisfies both by taking the max
+          // plus a bit of slack.
+          const halfWidth = (label * 3.2) / 2 + 5;
+          const stackHeight = 6 + 5 + 6; // nodeR + fontSize + gap
+          return Math.max(halfWidth, stackHeight) + 3;
         })
           .strength(1)
-          .iterations(3),
+          .iterations(4),
       );
       fg.d3ReheatSimulation();
     });
@@ -490,7 +495,7 @@ export default function GraphView({ onClose }: { onClose: () => void }) {
               // contrast against connecting edges without a solid pill.
               const isFocus = isHover || isActive;
               const fontSize = isFocus ? 5 : 4.5;
-              ctx.font = `${isFocus ? 600 : 500} ${fontSize}px ui-sans-serif, system-ui, -apple-system`;
+              ctx.font = `${isFocus ? 800 : 700} ${fontSize}px ui-sans-serif, system-ui, -apple-system`;
               ctx.textAlign = "center";
               ctx.textBaseline = "top";
               const labelY = n.y + r + 3;
